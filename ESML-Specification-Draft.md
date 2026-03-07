@@ -346,6 +346,8 @@ mockups:
 
 #### Groups
 
+Groups tend to become Bounded Contexts as the modeling evolves. However, at this stage, we still cannot call them Bounded Contexts.
+
 ```yaml
 groups:                               # OPTIONAL — spatial clusters on the board
   - id: grp-ordering
