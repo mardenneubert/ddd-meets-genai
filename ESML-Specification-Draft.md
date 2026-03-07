@@ -1,6 +1,6 @@
 # ESML — Event Storming Markup Language
 
-## Specification Draft v0.2.0
+## Specification Draft v0.2.1
 
 **Authors:** Marden Neubert & Joseph Yoder
 
@@ -100,7 +100,7 @@ Alternative initiators (instead of Actor):
 ### 3.1 Document Envelope
 
 ```yaml
-esml: "0.2.0"                        # REQUIRED — ESML specification version
+esml: "0.2.1"                        # REQUIRED — ESML specification version
 board:                                # REQUIRED — metadata about the board
   title: "string"                     # REQUIRED — workshop or board title
   variation: big_picture              # REQUIRED — one of: big_picture,
@@ -169,6 +169,7 @@ events:                               # REQUIRED — the backbone of the board
                                       #   timeline (left-to-right), starting at 1
     pivotal: false                    # OPTIONAL — true if marked as pivotal
     group: grp-ordering               # OPTIONAL — which group this belongs to
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }                   # REQUIRED — provenance (see 3.2)
 ```
 
@@ -191,6 +192,7 @@ commands:                             # OPTIONAL — present in process_modeling
     emits:                            # Domain events this command produces
       - evt-order-placed              #   (through the aggregate)
     group: grp-ordering
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -203,6 +205,7 @@ actors:
   - id: act-customer
     name: "Customer"
     group: grp-ordering               # OPTIONAL
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -221,6 +224,7 @@ aggregates:                           # OPTIONAL — present in design_level onl
     constraints:                      # OPTIONAL — business rules observed on
       - cst-minimum-order-value       #   or near the aggregate sticky
     group: grp-ordering
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -240,6 +244,7 @@ policies:
     triggers:                         # Commands this policy initiates
       - cmd-initiate-payment
     group: grp-ordering
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -257,6 +262,7 @@ read_models:
       - evt-order-placed              #   read model
       - evt-item-added
     group: grp-ordering
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -272,6 +278,7 @@ external_systems:
       - evt-payment-confirmed
       - evt-payment-failed
     group: grp-payment
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -289,6 +296,7 @@ hotspots:
                                       # OPTIONAL — expanded description
     near:                             # OPTIONAL — which elements this hotspot
       - evt-delivery-requested        #   is placed near on the board
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -300,6 +308,7 @@ opportunities:
     name: "Loyalty program for repeat customers"
     near:
       - evt-order-delivered
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -312,6 +321,7 @@ values:
     sentiment: positive               # positive | negative
     near:
       - evt-payment-confirmed
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -325,6 +335,7 @@ constraints:
                                       # OPTIONAL — natural-language rule
     applies_to:                       # Which aggregate(s) enforce this
       - agg-order
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -339,6 +350,7 @@ mockups:
       - rm-menu
     captures:                         # OPTIONAL — which command it feeds
       - cmd-place-order
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
@@ -368,6 +380,7 @@ swimlanes:                            # OPTIONAL — horizontal divisions
   - id: lane-kitchen
     name: "Kitchen"
     actor: act-kitchen-staff          # OPTIONAL — which actor owns this lane
+    notes: "string"                   # OPTIONAL — observation or clarification
     origin: { ... }
 ```
 
