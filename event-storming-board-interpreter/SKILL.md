@@ -166,7 +166,12 @@ Work through the board left-to-right, top-to-bottom:
    opportunities, values, and constraints. Link them to nearby elements
    via the `near` or `applies_to` fields.
 
-7. **Handle uncertainty.** If you detect a sticky but can't read it or
+7. **Add notes where useful.** Every element supports an optional `notes`
+   field. Use it to record observations about the board that don't fit
+   elsewhere — e.g., "this sticky was partially obscured by another" or
+   "text appears hand-corrected; original may have said X."
+
+8. **Handle uncertainty.** If you detect a sticky but can't read it or
    classify it, put it in the `unresolved` section with whatever partial
    information you have. It's better to capture it with low confidence
    than to silently drop it.
