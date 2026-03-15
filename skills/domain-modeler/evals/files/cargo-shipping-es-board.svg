@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 3840 1200" width="3840" height="1200"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#666666"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="3840" height="1200" fill="#FAFAFA"/>
+
+  <!-- Grid for reference (faint) -->
+  <defs>
+    <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+      <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#E0E0E0" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="3840" height="1200" fill="url(#grid)"/>
+
+  <!-- BOUNDED CONTEXT ZONES -->
+  <rect x="50" y="150" width="1250" height="1000" fill="none" stroke="#2E8B57" stroke-width="2" stroke-dasharray="8,4" rx="5"/>
+  <text x="60" y="170" font-size="14" font-family="Arial, sans-serif" font-weight="bold" fill="#2E8B57">Booking Context</text>
+  <rect x="1350" y="150" width="1050" height="1000" fill="none" stroke="#4169E1" stroke-width="2" stroke-dasharray="8,4" rx="5"/>
+  <text x="1360" y="170" font-size="14" font-family="Arial, sans-serif" font-weight="bold" fill="#4169E1">Tracking Context</text>
+  <rect x="2500" y="150" width="700" height="500" fill="none" stroke="#9370DB" stroke-width="2" stroke-dasharray="8,4" rx="5"/>
+  <text x="2510" y="170" font-size="14" font-family="Arial, sans-serif" font-weight="bold" fill="#9370DB">Voyage Context</text>
+  <rect x="2500" y="700" width="700" height="450" fill="none" stroke="#808080" stroke-width="2" stroke-dasharray="8,4" rx="5"/>
+  <text x="2510" y="720" font-size="14" font-family="Arial, sans-serif" font-weight="bold" fill="#808080">Location
+(Reference Data)</text>
+
+  <!-- ZONE 1: BOOKING CONTEXT -->
+  <g transform="translate(100, 200) rotate(0.8365607907473027)">
+    <rect x="0" y="2" width="100" height="70" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="100" height="70" fill="#FFF8DC" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Shipping Clerk</text>
+  </g>
+  <g transform="translate(250, 200) rotate(-2.8499354686639986)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#4169E1" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Book Cargo</text>
+  </g>
+  <g transform="translate(250, 330) rotate(-1.3498240897852845)">
+    <rect x="0" y="2" width="140" height="110" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="110" fill="#FFD700" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo</text>
+  </g>
+  <g transform="translate(400, 200) rotate(-1.6607355711070635)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Booked</text>
+  </g>
+  <g transform="translate(550, 200) rotate(1.418827284984074)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#4169E1" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Assign Itinerary</text>
+  </g>
+  <g transform="translate(550, 330) rotate(1.0601969245374683)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Routed</text>
+  </g>
+  <g transform="translate(700, 200) rotate(2.3530774062290725)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#4169E1" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Change</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Destination</text>
+  </g>
+  <g transform="translate(700, 330) rotate(-2.478367004223503)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Destination</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Changed</text>
+  </g>
+  <g transform="translate(850, 500) rotate(-0.46846908188837766)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#9370DB" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">When Cargo</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Handled → Derive</text>
+    <text x="7" y="44" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Delivery</text>
+  </g>
+  <g transform="translate(400, 500) rotate(-2.8212166833715777)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Misdirected</text>
+  </g>
+  <g transform="translate(550, 500) rotate(-1.6881721511783798)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Delivered</text>
+  </g>
+  <g transform="translate(1000, 200) rotate(0.03213172862017455)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#3CB371" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Cargo Tracking</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">View</text>
+  </g>
+  <g transform="translate(1000, 330) rotate(-2.8407841818968183)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#F0F0F0" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Routing Engine</text>
+  </g>
+  <g transform="translate(1000, 500) rotate(-1.806974095880109)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF6B6B" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">What if routing</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">engine is</text>
+    <text x="7" y="44" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">unavailable?</text>
+  </g>
+
+  <!-- ZONE 2: TRACKING CONTEXT -->
+  <g transform="translate(1400, 200) rotate(0.8993066266771392)">
+    <rect x="0" y="2" width="100" height="70" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="100" height="70" fill="#FFF8DC" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Port Operations</text>
+  </g>
+  <g transform="translate(1550, 200) rotate(0.26964888361930006)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#4169E1" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Register</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Handling Event</text>
+  </g>
+  <g transform="translate(1700, 200) rotate(-1.6773562677558198)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Received</text>
+  </g>
+  <g transform="translate(1700, 330) rotate(0.5355941032554523)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Loaded</text>
+  </g>
+  <g transform="translate(1700, 500) rotate(1.8565827400669601)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Unloaded</text>
+  </g>
+  <g transform="translate(1700, 670) rotate(-2.961007441931634)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Customs Cleared</text>
+  </g>
+  <g transform="translate(1850, 200) rotate(1.8349155109968471)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Cargo Claimed</text>
+  </g>
+  <g transform="translate(1850, 330) rotate(1.1888363699293611)">
+    <rect x="0" y="2" width="140" height="110" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="110" fill="#FFD700" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Handling Event</text>
+  </g>
+  <g transform="translate(2050, 500) rotate(-0.9584969008920488)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF6B6B" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">How do we handle</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">partial unloads?</text>
+  </g>
+
+  <!-- ZONE 3: VOYAGE CONTEXT -->
+  <g transform="translate(2550, 200) rotate(-2.0671230011293105)">
+    <rect x="0" y="2" width="100" height="70" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="100" height="70" fill="#FFF8DC" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Scheduling Dept</text>
+  </g>
+  <g transform="translate(2700, 200) rotate(2.743278433240687)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#4169E1" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#FFFFFF" font-weight="500">Schedule Voyage</text>
+  </g>
+  <g transform="translate(2700, 330) rotate(-0.9804327293242396)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Voyage Scheduled</text>
+  </g>
+  <g transform="translate(2700, 500) rotate(-2.4435249397191123)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF8C00" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Voyage Delayed</text>
+  </g>
+  <g transform="translate(2850, 330) rotate(-2.419701738999216)">
+    <rect x="0" y="2" width="140" height="110" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="110" fill="#FFD700" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Voyage</text>
+  </g>
+
+  <!-- ZONE 4: LOCATION (Reference Data) -->
+  <g transform="translate(2550, 750) rotate(2.084966198084759)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#F0F0F0" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">UN/LOCODE Port</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Registry</text>
+  </g>
+  <g transform="translate(2700, 850) rotate(0.6223561882013464)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FF6B6B" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="12" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">Should Location</text>
+    <text x="7" y="28" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">be external</text>
+    <text x="7" y="44" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500">service?</text>
+  </g>
+
+  <!-- FLOW ARROWS -->
+  <line x1="350" y1="235" x2="390" y2="235" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="440" y1="280" x2="510" y2="235" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="600" y1="280" x2="640" y2="235" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="750" y1="280" x2="740" y2="310" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1620" y1="235" x2="1670" y2="235" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1750" y1="260" x2="1750" y2="300" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1750" y1="380" x2="1750" y2="460" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="1950" y1="520" x2="1100" y2="520" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="1525.0" y="510.0" font-size="11" font-family="Arial, sans-serif" fill="#666666" text-anchor="middle">Cargo
+Handled</text>
+  <line x1="2770" y1="260" x2="2760" y2="310" stroke="#666666" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Crossed-out note (modeling correction) -->
+  <g id="crossed-note" transform="translate(580, 200) rotate(-1)">
+    <rect x="0" y="2" width="140" height="90" fill="#00000020" rx="3"/>
+    <rect x="0" y="0" width="140" height="90" fill="#FFD700" stroke="#333333" stroke-width="1" rx="3"/>
+    <text x="7" y="25" font-size="12" font-family="Arial, sans-serif" fill="#000000" font-weight="500" text-decoration="line-through">Shipment</text>
+    <line x1="7" y1="20" x2="120" y2="20" stroke="#000000" stroke-width="2"/>
+    <text x="7" y="50" font-size="12" font-family="Arial, sans-serif" fill="#FF6B6B" font-weight="bold">=&gt; Cargo</text>
+  </g>
+  <!-- Legend -->
+  <g id="legend" transform="translate(3600, 30)">
+    <text x="0" y="0" font-size="14" font-weight="bold" font-family="Arial, sans-serif" fill="#333333">Legend</text>
+    <rect x="0" y="25" width="12" height="12" fill="#FF8C00" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="35" font-size="11" font-family="Arial, sans-serif" fill="#333333">Event</text>
+    <rect x="0" y="45" width="12" height="12" fill="#4169E1" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="55" font-size="11" font-family="Arial, sans-serif" fill="#333333">Command</text>
+    <rect x="0" y="65" width="12" height="12" fill="#FFD700" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="75" font-size="11" font-family="Arial, sans-serif" fill="#333333">Aggregate</text>
+    <rect x="0" y="85" width="12" height="12" fill="#9370DB" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="95" font-size="11" font-family="Arial, sans-serif" fill="#333333">Policy</text>
+    <rect x="0" y="105" width="12" height="12" fill="#FF6B6B" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="115" font-size="11" font-family="Arial, sans-serif" fill="#333333">Hotspot</text>
+    <rect x="0" y="125" width="12" height="12" fill="#3CB371" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="135" font-size="11" font-family="Arial, sans-serif" fill="#333333">Read Model</text>
+    <rect x="0" y="145" width="12" height="12" fill="#FFF8DC" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="155" font-size="11" font-family="Arial, sans-serif" fill="#333333">Actor</text>
+    <rect x="0" y="165" width="12" height="12" fill="#F0F0F0" stroke="#333333" stroke-width="0.5"/>
+    <text x="18" y="175" font-size="11" font-family="Arial, sans-serif" fill="#333333">External</text>
+  </g>
+</svg>

@@ -1,0 +1,486 @@
+Event Storming Workshop Transcript — Cargo Shipping Domain
+Session 1: Big Picture → Design Level
+Date: 2026-03-10
+Duration: ~55 minutes
+Location: Conference Room B, Maritime Logistics HQ
+
+Participants:
+  - Facilitator: Anna Chen (DDD practitioner)
+  - Operations Manager: Marcus Webb (end-to-end cargo flow expert)
+  - Booking Agent: Sofia Petrova (customer-facing booking)
+  - Port Operations Specialist: James Okafor (handling events at ports)
+  - IT/Systems: Raj Patel (current system architecture)
+
+---
+
+[00:00:15] Anna: Alright everyone, thanks for making time for this. We're going to do an Event Storming session for our cargo shipping domain. The goal is to map out what happens in this business from end to end. We'll start with domain events — things that happen that the business cares about. Orange stickies, past tense. Who wants to kick us off?
+
+[00:00:42] Sofia: I'll start. The first thing that happens from my perspective is a customer calls or comes online and books a cargo shipment. So...
+(action: places orange sticky note "Cargo Booked")
+
+[00:00:58] Sofia: That's the starting point. A customer tells us "I need to ship goods from Shanghai to Stockholm by the 15th of next month."
+
+[00:01:12] Marcus: Right. And once a cargo is booked, someone needs to figure out the route — which ships, which ports. So the next thing is the itinerary gets assigned.
+(action: places orange sticky note "Itinerary Assigned")
+
+[00:01:30] Anna: Good. Let me clarify — when you say "itinerary," what exactly is that?
+
+[00:01:38] Marcus: It's the planned route. A sequence of legs — cargo goes on ship V100 from Shanghai to Singapore, then ship V200 from Singapore to Rotterdam, then V300 from Rotterdam to Stockholm. Each leg specifies which voyage and where you load and unload.
+
+[00:01:58] Sofia: And the customer specifies what we call the route specification — origin, destination, and the deadline. The itinerary is our plan for how to satisfy that.
+
+[00:02:12] Anna: Excellent. So there's a distinction between what the customer wants — the route specification — and how we plan to deliver it — the itinerary. Those are two different things.
+
+[00:02:25] Sofia: Exactly. The route specification is the customer's requirement. The itinerary is our solution.
+
+[00:02:35] Anna: I love that. That's a classic Specification pattern. The route specification can tell you whether a proposed itinerary satisfies it or not. Fun fact — in Evans' original model, this was called the "delivery specification." But "route specification" is more precise because it specifies the route requirement, not the delivery itself. The delivery is what actually happens. Let me note that.
+(action: writes "RouteSpecification — Specification pattern (evolved from Evans' Delivery Specification)" on a side note)
+
+[00:02:52] Marcus: Now, sometimes the customer changes their mind about the destination. Like, the cargo was supposed to go to Stockholm but now they want it in Helsinki instead.
+(action: places orange sticky note "Destination Changed")
+
+[00:03:08] Anna: When that happens, what's the impact?
+
+[00:03:14] Marcus: The route specification changes, which means the existing itinerary may not work anymore. We might need a new itinerary. It's essentially re-routing.
+
+[00:03:28] Anna: So a destination change potentially invalidates the itinerary. Got it. What happens next in the timeline? After the cargo is booked and routed?
+
+[00:03:40] James: My world starts here. The cargo physically shows up at the origin port. We receive it — check it in, if you like.
+(action: places orange sticky note "Cargo Received")
+
+[00:03:55] James: Then it gets loaded onto a vessel.
+(action: places orange sticky note "Cargo Loaded")
+
+[00:04:02] James: At the intermediate port — say Singapore in Marcus's example — it gets unloaded from one ship...
+(action: places orange sticky note "Cargo Unloaded")
+
+[00:04:12] James: ...and then loaded onto the next ship. Sometimes customs gets involved at intermediate ports too.
+(action: places orange sticky note "Customs Cleared")
+
+[00:04:25] James: Finally, at the destination, it gets unloaded one last time, and the customer comes to pick it up — we call that "claiming."
+(action: places orange sticky note "Cargo Claimed")
+
+[00:04:40] Anna: So the physical handling sequence is: received, loaded, possibly unloaded and reloaded at intermediary ports with customs in between, and finally claimed at the destination.
+
+[00:04:55] James: That's right. Each of those is a handling event. We register them as they happen — the port operator scans the cargo and logs it.
+
+[00:05:08] Raj: In the current system, all of these events are stored in a single "cargo" table with a status field that we update. It's a nightmare. Every time we add a new event type, we're changing the same table.
+
+[00:05:25] Anna: Let's come back to the system concerns later. For now, let's stay in the domain. Marcus, what else happens?
+
+[00:05:35] Marcus: Here's the critical thing. After each handling event, we need to know the cargo's delivery status. Is it on track? Is it where it should be? Is it going to arrive on time?
+
+[00:05:50] Anna: How does that work today?
+
+[00:05:55] Marcus: Well, that's interesting. The delivery status is — or should be — derived. You look at the last handling event and compare it against the itinerary. If the cargo was unloaded in Singapore and the itinerary says it should go through Singapore, we're good. If it was unloaded in Dubai and Dubai isn't on the itinerary — we have a problem.
+
+[00:06:18] Anna: Wait — so the delivery status is never stored directly? It's calculated?
+
+[00:06:25] Marcus: That's how it should work, yes. The delivery is derived from the handling history.
+
+[00:06:32] Raj: That's not how it works today though. Today we have a status field that gets updated by triggers. And it's constantly out of sync.
+
+[00:06:42] James: Yeah, I've seen cargo that the system says is "in transit" but we unloaded it three days ago. Nobody updated the status.
+
+[00:06:52] Anna: This is a huge insight. Let me capture this.
+(action: writes on a separate note: "DELIVERY IS ALWAYS DERIVED, NEVER DIRECTLY SET — calculated from handling events + itinerary")
+
+[00:07:05] Anna: So this is a value object — Delivery — that gets recalculated from scratch every time a new handling event arrives. Evans' original model had this as a "Delivery History" entity that maintained a collection of handling events, but the insight here is cleaner — Delivery is a pure derivation, not stored state. No history object needed. What goes into it?
+
+[00:07:18] Marcus: Transport status — is the cargo not yet received, in port, on board a vessel, or claimed? Also the last known location, which voyage it's currently on, whether it's misdirected, an ETA, and the routing status — is it routed or not.
+
+[00:07:40] Anna: What does "misdirected" mean precisely?
+
+[00:07:45] Marcus: A cargo is misdirected when a handling event is inconsistent with the itinerary. Like, the itinerary says it should be loaded onto voyage V200 in Singapore, but instead it was loaded onto V500 going to Dubai. That's a misdirection.
+(action: places orange sticky note "Cargo Misdirected")
+
+[00:08:05] Anna: So misdirection is detected by comparing a handling event against the itinerary. It's a policy — "when cargo is handled, check if the handling event is consistent with the itinerary."
+(action: places purple sticky note "When Cargo Handled → Check for Misdirection / Derive Delivery")
+
+[00:08:25] Sofia: And when a cargo is misdirected, operations needs to know immediately. It might need re-routing.
+
+[00:08:35] Marcus: Right. And there's the happy ending too — when the cargo is claimed at the final destination, it's delivered.
+(action: places orange sticky note "Cargo Delivered")
+
+[00:08:50] Anna: Good. Let's now add the commands — the actions that trigger these events. Blue stickies. Sofia, what does a booking agent do?
+
+[00:09:02] Sofia: They book a cargo. The customer gives us origin, destination, and when it needs to arrive.
+(action: places blue sticky note "Book Cargo" to the left of "Cargo Booked")
+
+[00:09:15] Sofia: Then someone — usually me or the routing department — assigns the itinerary.
+(action: places blue sticky note "Assign Itinerary" to the left of "Itinerary Assigned")
+
+[00:09:28] Sofia: And there's the destination change.
+(action: places blue sticky note "Change Destination" to the left of "Destination Changed")
+
+[00:09:38] James: For handling events, we register them as they happen at the port.
+(action: places blue sticky note "Register Handling Event")
+
+[00:09:50] Anna: And who issues these commands? Let me add actors.
+(action: places small yellow actor sticky "Shipping Clerk" near "Book Cargo")
+(action: places small yellow actor sticky "Port Operations" near "Register Handling Event")
+
+[00:10:05] Marcus: For itinerary assignment, it's usually the operations team. Sometimes it's automated — the system suggests routes from the routing engine and someone approves.
+(action: places small yellow actor sticky "Operations Manager" near "Assign Itinerary")
+
+[00:10:22] Anna: Let me add the routing engine as an external system.
+(action: places white sticky note "Routing Engine" near "Assign Itinerary")
+
+[00:10:35] Anna: Now let's think about aggregates — the clusters of things that change together and must be consistent. Where are the consistency boundaries?
+(action: places yellow aggregate sticky "Cargo" above the booking events)
+
+[00:10:52] Marcus: Cargo is the big one. The cargo has a tracking ID, a route specification, an itinerary, and the delivery status. All of those need to be consistent.
+
+[00:11:08] James: And then there's the handling event. Each handling event is its own thing — it's a fact about what happened. Once it's recorded, it doesn't change.
+
+[00:11:22] Anna: So handling events are immutable?
+
+[00:11:26] James: Yes. If someone makes a mistake, we register a new corrective event. We never go back and change the original.
+(action: places yellow aggregate sticky "Handling Event" near the handling events)
+
+[00:11:40] Raj: What about voyages? A voyage is a ship's schedule — it has a voyage number, and a sequence of port-to-port movements. Like V100 goes Shanghai to Singapore, then Singapore to Colombo.
+
+[00:11:58] Anna: Is a voyage part of the cargo?
+
+[00:12:04] Marcus: No, definitely not. Voyages exist independently. Multiple cargoes can be on the same voyage. A voyage is scheduled by the fleet management team.
+
+[00:12:18] James: Right, the cargo references the voyage by its number. The leg in the itinerary says "on voyage V100."
+
+[00:12:28] Anna: So voyages are a separate aggregate.
+(action: places yellow aggregate sticky "Voyage")
+
+[00:12:38] Raj: Initially I thought voyage might be part of the cargo, but that doesn't make sense. A voyage has its own lifecycle — it's scheduled, it departs, it has delays. That's all independent of any individual cargo.
+
+[00:12:55] Anna: Good catch. That's a really common mistake in domain modeling — putting too much into one aggregate. The voyage is its own thing. Interestingly, in Evans' original model, the individual port-to-port segments — what we're calling carrier movements — were the aggregate roots, not the voyage itself. But modeling the voyage as the aggregate with carrier movements inside it is more natural for our domain. The voyage is what has identity and a lifecycle.
+
+[00:13:08] Anna: What about locations? Ports, terminals?
+
+[00:13:15] Marcus: Locations are reference data. We use UN/LOCODE — it's an international standard. Each port has a five-character code. CNSHA for Shanghai, SESTO for Stockholm, SGSIN for Singapore.
+
+[00:13:32] Sofia: Yeah, locations don't really change. They're shared across everything.
+
+[00:13:40] Anna: So Location is more like reference data than a business domain. Let me put that aside as a generic subdomain.
+
+[00:13:52] Anna: OK, let's step back and look at the big picture. I'm starting to see boundaries forming. Who owns what?
+
+[00:14:05] Anna: Sofia, your world is about booking cargo, specifying where it needs to go, and assigning itineraries. That feels like one bounded context.
+
+[00:14:18] Sofia: Yes — I call that "the booking side." We create the cargo, set the route specification, find routes, assign itineraries.
+
+[00:14:30] Anna: James, your world is about what physically happens to cargo at ports. Recording events.
+
+[00:14:40] James: Right. We don't care about itineraries or routes. We just record what happens: cargo arrived, cargo loaded, cargo unloaded. Facts.
+
+[00:14:55] Anna: That's a different bounded context — Tracking. It records facts. It doesn't interpret them.
+
+[00:15:05] Marcus: And the interpretation — figuring out if the cargo is on track or misdirected — that happens back in the booking context. Because that's where the itinerary lives.
+
+[00:15:18] Anna: Exactly! The tracking context publishes handling events. The booking context consumes them and derives the delivery status. That's a beautiful separation.
+(action: draws dashed boundary around booking-related stickies, labels it "Booking Context")
+(action: draws dashed boundary around handling-related stickies, labels it "Tracking Context")
+
+[00:15:40] Raj: So the tracking context doesn't know about itineraries at all?
+
+[00:15:48] Marcus: No. Tracking just records what happened. Booking is where we compare what happened against what should have happened.
+
+[00:15:58] Anna: And the routing engine?
+
+[00:16:05] Marcus: That's separate. It's an algorithm that finds routes. We give it "Shanghai to Stockholm by March 15" and it gives back possible itineraries. The booking context talks to it through a service.
+
+[00:16:22] Anna: So the routing service in the booking context translates between our domain language — route specifications and itineraries — and whatever the routing engine speaks internally. That's an anticorruption layer.
+(action: draws dashed boundary around routing, labels it "Routing Context (External)")
+
+[00:16:45] Sofia: What about voyages? Whose context is that?
+
+[00:16:52] Marcus: Fleet management handles voyage scheduling. It's a supporting function — we need voyage schedules to build itineraries and to validate handling events, but it's not the core of what we do.
+(action: draws dashed boundary around voyage-related stickies, labels it "Voyage Context")
+
+[00:17:10] Anna: Let me summarize what I'm seeing for subdomains. The core domain — what differentiates this company — is the shipping capability: booking, routing, tracking, delivery management. Within that, I'd say booking and tracking are the heart of the core domain.
+
+[00:17:30] Marcus: I agree. If our booking and tracking isn't excellent, we lose customers. Voyage scheduling is important but not unique — every shipping company has schedules.
+
+[00:17:45] Anna: So shipping is core, voyage management is supporting, location is generic. The routing algorithm is supporting — it's important but could potentially be a third-party system.
+
+[00:18:00] Anna: Now let's dig into the tactical details. Let's start with the Cargo aggregate. Marcus, walk me through the lifecycle.
+
+[00:18:12] Marcus: A cargo starts as Booked — it has a tracking ID and a route specification but no itinerary yet. Once we assign an itinerary, it becomes Routed. When the first handling event comes in — typically a RECEIVE at the origin — it's InTransit. And when the customer claims it at the destination, it's Claimed. Done.
+
+[00:18:38] Anna: What identifies a cargo?
+
+[00:18:42] Sofia: A tracking ID. We generate it when the cargo is booked. It's like "ABC123." The customer uses it to track their shipment. It never changes.
+
+[00:18:55] Anna: Immutable identity. Good. Now, the route specification — that's a value object?
+
+[00:19:02] Marcus: Yes. It has origin, destination, and arrival deadline. It's the customer's requirement. If the destination changes, we create a new route specification — we don't modify the old one.
+
+[00:19:18] Anna: Classic value object. And the itinerary?
+
+[00:19:22] Marcus: Also a value object. A sequence of legs. Each leg has a voyage number, a load location, an unload location, and expected load and unload times. When we re-route, we assign a whole new itinerary.
+
+[00:19:42] Anna: So both route specification and itinerary are immutable value objects inside the cargo aggregate. The cargo aggregate also has the delivery — which we said is derived. Let me write out the invariants.
+
+[00:19:58] Anna: One — a cargo must always have a route specification after booking. Two — if an itinerary is assigned, it must satisfy the route specification. Three — the delivery status is always derived, never directly set. Four — the tracking ID is immutable.
+(action: writes invariants on a separate note)
+
+[00:20:22] Raj: When you say "the itinerary must satisfy the route specification" — what exactly does that mean?
+
+[00:20:30] Marcus: The first leg's load location must match the origin. The last leg's unload location must match the destination. And the last leg's unload time must be before the arrival deadline. If all three are true, the itinerary satisfies the specification.
+
+[00:20:50] Anna: That's the Specification pattern in action. RouteSpecification has an isSatisfiedBy method that takes an itinerary and returns true or false.
+
+[00:21:05] Anna: Let's talk about the Delivery value object more carefully. Marcus, you mentioned transport status, last known location, current voyage, misdirection, ETA, and routing status. Is that complete?
+
+[00:21:20] Marcus: I'd also add whether the cargo has been unloaded at the final destination. That's different from being claimed — it can be sitting at the destination port before the customer picks it up.
+
+[00:21:38] Anna: How do you calculate transport status?
+
+[00:21:42] James: If there are no handling events, it's NOT_RECEIVED. If the last event is a RECEIVE, the cargo is IN_PORT. If the last event is a LOAD, it's ONBOARD_CARRIER. If it's an UNLOAD, back to IN_PORT. If it's CLAIM, it's CLAIMED.
+
+[00:22:05] Marcus: And the last known location is simply the location from the most recent handling event. Current voyage is the voyage from the most recent LOAD event, if the cargo is currently on board.
+
+[00:22:22] Anna: And misdirection — we check whether the handling event is expected given the itinerary?
+
+[00:22:30] Marcus: Exactly. If the cargo was loaded onto a voyage in Singapore, we check: does the itinerary have a leg where the load location is Singapore and the voyage matches? If not, the cargo is misdirected.
+
+[00:22:50] Anna: Beautiful. So every time a handling event comes in, we recalculate all of this from scratch. No stored state for delivery — pure derivation.
+
+[00:23:02] Raj: That's actually really clean from a systems perspective. No state sync issues. The handling history is the single source of truth, and delivery is just a projection of it.
+
+[00:23:18] Anna: Exactly. Now let's talk about the handling event aggregate in the Tracking context. James, what goes into a handling event?
+
+[00:23:30] James: The event has a unique ID, the tracking ID of the cargo it's about, the event type — RECEIVE, LOAD, UNLOAD, CUSTOMS, or CLAIM — the location where it happened, and when it was completed.
+
+[00:23:48] James: For LOAD and UNLOAD events, we also record the voyage number — which ship. For RECEIVE, CUSTOMS, and CLAIM, there's no voyage involved — those happen at a port, not on a ship.
+
+[00:24:08] Anna: Any invariants?
+
+[00:24:12] James: A handling event is immutable once created. LOAD and UNLOAD must have a voyage number. RECEIVE, CUSTOMS, and CLAIM must not have one. The cargo referenced by the tracking ID must exist. And the completion time can't be in the future — you can't register something that hasn't happened yet.
+
+[00:24:40] Anna: Makes sense. And when you register a handling event, what happens?
+
+[00:24:48] James: We publish it. The tracking context emits a "Cargo Handled" event — anyone who cares can listen. In our case, the booking context listens so it can re-derive the delivery status.
+
+[00:25:05] Anna: So Cargo Handled is the integration event between Tracking and Booking. It carries the tracking ID, event type, location, voyage number, and completion time.
+(action: draws arrow from "Cargo Handled" in Tracking to "Derive Delivery" policy in Booking)
+
+[00:25:25] Marcus: Yes. And if the new delivery shows the cargo is misdirected, the booking context emits a Cargo Misdirected event so operations gets alerted. And if the cargo has been claimed at the destination, it emits Cargo Delivered.
+
+[00:25:45] Anna: Let's talk about the context map. How do these bounded contexts relate?
+
+[00:25:55] Anna: Tracking is upstream, Booking is downstream. Tracking publishes handling events, Booking consumes them. I'd call this customer-supplier — Booking's needs influence what data Tracking includes in its events.
+
+[00:26:15] James: That's fair. We added the voyage number to handling events because the booking team needed it for misdirection detection. Before that, we didn't track it.
+
+[00:26:30] Anna: And Booking to Routing?
+
+[00:26:35] Marcus: Booking calls the routing engine to find itineraries. But we translate between our domain language and the routing engine's representation. The routing engine doesn't know about our RouteSpecification object — it just takes origin, destination, and date. We translate.
+
+[00:26:55] Anna: That's the anticorruption layer pattern. The RoutingService in Booking translates between worlds.
+
+[00:27:08] Anna: Booking and Voyage?
+
+[00:27:12] Sofia: We use voyage numbers directly. We don't translate them. If the voyage context says it's V100, we call it V100 in our itinerary legs.
+
+[00:27:25] Anna: That's conformist — Booking conforms to Voyage's model for voyage numbers. Same for Tracking, right James?
+
+[00:27:35] James: Yes. We reference voyages by their number when recording LOAD and UNLOAD events. We don't have our own vocabulary for voyages.
+
+[00:27:48] Anna: And Location is shared by everyone — an Open Host Service with Published Language, since UN/LOCODE is an international standard.
+
+[00:28:00] Raj: Speaking of systems — how does the routing engine actually work?
+
+[00:28:08] Marcus: It's a graph-based system. Locations are nodes, voyage legs are edges. It finds paths from origin to destination that arrive before the deadline. It returns a list of candidate itineraries and we pick one — or the customer picks one.
+
+[00:28:30] Anna: Let me put a hotspot here: "What if the routing engine is unavailable?"
+(action: places pink sticky note "What if routing engine is unavailable?")
+
+[00:28:42] Marcus: Good question. Today it's pretty reliable but we don't have a fallback. Operations would have to manually construct an itinerary.
+
+[00:28:55] Anna: Let me add another hotspot from James.
+(action: places pink sticky note "How do we handle partial unloads?")
+
+[00:29:05] James: Yeah, that comes up sometimes. A container is supposed to be fully unloaded in Singapore but only part of it comes off the ship. In our current model, we either record it as unloaded or not. There's no "partially unloaded."
+
+[00:29:22] Anna: We'll park that for now. OK, let me put a hotspot about returns and re-routing too.
+(action: places pink sticky note "Should Location be an external service?")
+
+[00:29:40] Anna: Let's talk about the Voyage aggregate briefly. Raj mentioned it has a voyage number and a schedule of carrier movements.
+
+[00:29:52] Marcus: Right. A voyage — say V100 — might go Shanghai to Singapore, then Singapore to Colombo, then Colombo to Rotterdam. Each port-to-port segment is a carrier movement. Each carrier movement has departure and arrival locations and times.
+
+[00:30:10] Anna: And the invariants?
+
+[00:30:15] Marcus: The schedule must have at least one movement. They must be in order — chronological. And each movement's arrival location must match the next movement's departure location. You can't teleport a ship.
+
+[00:30:32] Anna: Who manages voyages?
+
+[00:30:36] Marcus: The scheduling department. They create voyage schedules, sometimes months in advance. And they update them when there are delays.
+(action: places blue sticky note "Schedule Voyage")
+(action: places orange sticky note "Voyage Scheduled")
+(action: places orange sticky note "Voyage Delayed")
+
+[00:30:55] Raj: When a voyage is delayed, that affects ETAs for all cargo on that voyage, right?
+
+[00:31:02] Marcus: Yes. The booking context would need to recalculate delivery for every cargo with that voyage in its itinerary. That's a cross-cutting concern.
+
+[00:31:15] Anna: Let me note that the Voyage Delayed event would be consumed by the Booking context.
+(action: draws arrow from "Voyage Delayed" to Booking context)
+
+[00:31:28] Anna: We haven't talked about read models yet. What views does the business need?
+
+[00:31:35] Sofia: The most important one is the cargo tracking view. Customers and our service desk need to see: where is my cargo, what's its status, is it on time, is it misdirected?
+
+[00:31:50] Anna: What data does that view show?
+
+[00:31:55] Sofia: Tracking ID, origin, destination, current transport status, last known location, ETA, and whether it's misdirected. Basically the key fields from the Delivery value object but in a read-friendly format.
+(action: places green sticky note "Cargo Tracking View")
+
+[00:32:12] Anna: That view would subscribe to Cargo Booked, Cargo Routed, Cargo Misdirected, and Cargo Delivered events to stay up to date.
+
+[00:32:25] Raj: In the current system we query the cargo table directly for this. With this new model, we'd project it from events?
+
+[00:32:35] Anna: Exactly. The read model subscribes to domain events and maintains its own denormalized view. No need to join the cargo table with the handling event table and the itinerary table every time someone checks tracking.
+
+[00:32:50] Marcus: That would actually be much faster than what we have today. Our tracking page is slow because of all those joins.
+
+[00:33:00] Anna: Let's do a quick review of the domain services. We mentioned the RoutingService — it lives in the Booking context, and it finds itineraries that satisfy a route specification. It calls the external routing engine.
+
+[00:33:18] Anna: Any other services?
+
+[00:33:22] Marcus: Not domain services, I think. Most of the logic lives in the aggregates. The Cargo knows how to derive its delivery. The HandlingEvent knows its validation rules.
+
+[00:33:38] Anna: Good. Let me also add the application services that orchestrate the use cases. For Booking, we have: Book Cargo service — validates input, creates the cargo through a factory, persists it, publishes Cargo Booked. Assign Itinerary service — fetches routes from the routing service, validates against the route specification, assigns to cargo.
+
+[00:34:00] Anna: For Tracking: Register Handling Event service — validates the event, persists it, publishes Cargo Handled.
+
+[00:34:15] Anna: Marcus, does the Cargo need a factory?
+
+[00:34:20] Marcus: I think so. Creating a cargo involves generating a tracking ID, creating the initial route specification, and setting up the initial delivery status — which would be NOT_RECEIVED, not routed, not misdirected. It's not a trivial constructor.
+
+[00:34:42] Anna: Fair enough. The factory encapsulates that creation logic.
+
+[00:34:50] Anna: One more thing — I noticed we originally had someone put up "Shipment" as an aggregate name.
+(action: points to a crossed-out yellow sticky note)
+
+[00:35:00] Sofia: Oh yeah, I wrote that at the beginning. But Marcus corrected me — in our domain, we always say "cargo." A shipment could be multiple cargoes. The unit we track is the cargo.
+
+[00:35:15] Marcus: "Cargo" is the ubiquitous language. Everyone in the business says "cargo." The tracking ID tracks a cargo. The handling events happen to a cargo. We should use that term consistently.
+
+[00:35:30] Anna: Right. That's exactly what ubiquitous language is about — using the terms the domain experts use, consistently throughout the model and the code.
+
+[00:35:45] Anna: Let me capture some key ubiquitous language terms. Cargo — a unit of goods being transported, identified by a tracking ID. Route Specification — the customer's requirements: origin, destination, deadline. Itinerary — the planned route, a sequence of legs. Leg — a segment of transport on a specific voyage. Delivery — the derived transport status. Handling Event — a physical event in the cargo's lifecycle.
+
+[00:36:20] Anna: And Misdirected — a cargo is misdirected when a handling event is inconsistent with its itinerary.
+
+[00:36:30] James: I'd also add the handling event types to the ubiquitous language. RECEIVE, LOAD, UNLOAD, CUSTOMS, CLAIM. Those are very specific terms that everyone in port operations understands.
+
+[00:36:48] Anna: Good. Let me also capture Voyage — a specific journey of a vessel with a voyage number, and Carrier Movement — a single port-to-port segment within a voyage.
+
+[00:37:02] Raj: What about Location? It's just a port, right?
+
+[00:37:08] Marcus: A location is any place in our logistics network. Usually a port, identified by UN/LOCODE. Shanghai is CNSHA, Singapore is SGSIN, Stockholm is SESTO. It's an international standard — we don't make up our own codes.
+
+[00:37:28] Anna: Great. Let me do a full walkthrough of the domain to make sure we haven't missed anything.
+
+[00:37:35] Anna: A Shipping Clerk books a cargo by specifying origin, destination, and arrival deadline. This creates a Cargo with a generated tracking ID and a RouteSpecification. The cargo starts as NOT_RECEIVED, not routed.
+
+[00:37:55] Anna: An Operations Manager requests routes from the RoutingService, which queries the external routing engine. The routing engine returns candidate itineraries. The manager selects one and assigns it. The itinerary must satisfy the route specification — first leg starts at origin, last leg ends at destination, arrives before deadline. The cargo is now Routed.
+
+[00:38:22] Anna: At the origin port, Port Operations receives the cargo. They register a RECEIVE handling event. The tracking context publishes Cargo Handled. The booking context receives it, re-derives the Delivery. Transport status is now IN_PORT. Last known location is the origin. Not misdirected (assuming the event is consistent with the itinerary).
+
+[00:38:52] Anna: The cargo is loaded onto the first voyage. LOAD event registered, Cargo Handled published, Delivery re-derived. Transport status is ONBOARD_CARRIER, current voyage is V100.
+
+[00:39:08] Anna: At the intermediate port, UNLOAD, then LOAD onto the next voyage. At the destination, UNLOAD, then eventually CLAIM. On CLAIM at the destination, the cargo is delivered.
+
+[00:39:25] Anna: At any point, if a handling event doesn't match the itinerary — wrong port, wrong voyage — the delivery derivation flags the cargo as misdirected, and the booking context emits Cargo Misdirected.
+
+[00:39:42] Anna: Also at any point, the customer can change the destination. This updates the route specification and potentially requires a new itinerary.
+
+[00:39:55] Marcus: That covers it. The one thing I'd add is that voyages can be delayed, which affects ETAs.
+
+[00:40:05] Anna: Right — Voyage Delayed is an event that the booking context should listen for to recalculate ETAs. We noted that.
+
+[00:40:18] Anna: Let me ask a few probing questions. Is there anything about customs that we're missing?
+
+[00:40:28] James: Customs clearance is interesting because it can happen at origin, at intermediate ports, or at destination. The customs authorities at each country have different rules. But from our modeling perspective, CUSTOMS is just another handling event type. The complexity of customs rules is outside our system — we just record that customs was cleared at a location.
+
+[00:40:55] Marcus: There might be a future need to integrate with customs systems, but that's not in scope now.
+
+[00:41:05] Anna: Fair. What about payments, billing?
+
+[00:41:10] Sofia: That's a separate concern entirely. Billing happens after booking, and it's based on the route specification and cargo type. But it's not part of the shipping domain we're modeling today.
+
+[00:41:25] Anna: Good — we're keeping scope focused. Last question — how does the tracking view stay consistent? Is it real-time?
+
+[00:41:35] Raj: It doesn't need to be real-time. Handling events come in from ports and there can be a delay of minutes or even hours between the physical event and when it's registered. So eventual consistency for the tracking view is perfectly fine.
+
+[00:41:52] Anna: That aligns with the event-driven architecture. The booking context receives handling events asynchronously and updates the cargo's derived delivery. The read model projects it.
+
+[00:42:05] Marcus: One thing that's been bugging me — when the cargo is claimed at the destination, do we still accept handling events after that?
+
+[00:42:18] James: Good question. Technically, we shouldn't get any after CLAIM. But in practice, sometimes events come in out of order. Like, CLAIM is registered before the last UNLOAD because the customer was quick.
+
+[00:42:35] Anna: How should we handle that?
+
+[00:42:40] Marcus: I'd say we accept all handling events regardless. The delivery derivation should handle out-of-order events gracefully — it should look at the entire history, not just the most recent event, to determine the correct status.
+
+[00:42:58] Anna: Good design principle. The handling history is append-only, and the derivation considers all events. Let me note that.
+
+[00:43:10] Anna: OK, I think we have a really solid model. Let me do a quick count. We have four bounded contexts: Booking, Tracking, Voyage, and Location. Four subdomains: Shipping (core), Voyage Management (supporting), Routing (supporting), and Location (generic).
+
+[00:43:30] Anna: In the Booking context, one aggregate — Cargo — with four value objects: RouteSpecification, Itinerary, Leg, and Delivery. Plus the RoutingService as a domain service.
+
+[00:43:48] Anna: In Tracking, one aggregate — HandlingEvent. Simple and focused.
+
+[00:43:55] Anna: In Voyage, one aggregate — Voyage, with CarrierMovement as a value object.
+
+[00:44:02] Anna: Location has one aggregate — Location. Reference data.
+
+[00:44:10] Anna: The context map has five relationships: Tracking→Booking (customer-supplier via events), Booking→Routing (anticorruption layer via API), Voyage→Booking (conformist), Voyage→Tracking (conformist), and Location→all (Open Host Service with Published Language).
+
+[00:44:35] Anna: Key domain events crossing boundaries: Cargo Handled from Tracking to Booking, and Voyage Delayed from Voyage to Booking. Everything else is internal to a context.
+
+[00:44:50] Anna: Three hotspots to revisit: routing engine unavailability, partial unloads, and whether Location should be an external service.
+
+[00:45:02] Marcus: This is really clean. Much better than our current monolithic system design.
+
+[00:45:10] Raj: I can already see how this maps to microservices. Each bounded context could be its own service with its own database. Tracking publishes events to a message broker, Booking subscribes.
+
+[00:45:25] Anna: Let's not jump to implementation yet! But yes, the bounded contexts give us natural deployment boundaries. The context map tells us how they communicate.
+
+[00:45:38] James: One last thought — should we capture the fact that when a cargo is booked, the tracking context needs to know about it? So it can validate that handling events reference an existing cargo.
+
+[00:45:55] Anna: Yes! Cargo Booked should be consumed by the Tracking context. That way, Tracking knows which tracking IDs are valid. Good catch.
+(action: draws arrow from "Cargo Booked" to Tracking context)
+
+[00:46:10] Marcus: Same for Cargo Routed — Tracking might want to know the itinerary so it can provide richer information... actually, no. We said Tracking doesn't care about itineraries. It just records facts.
+
+[00:46:28] Anna: Right. Tracking doesn't interpret. Booking interprets. Tracking just needs to know the cargo exists. Cargo Booked is enough.
+
+[00:46:40] Anna: And Cargo Routed should go to Tracking too, actually — so Tracking knows the cargo has an itinerary even if it doesn't use the itinerary details itself.
+(action: draws arrow from "Cargo Routed" to Tracking context)
+
+[00:46:58] Sofia: Should the Tracking view — the read model — also show the itinerary? Customers like to see the planned route.
+
+[00:47:10] Anna: Good question. The Cargo Tracking View could subscribe to Cargo Routed to get the itinerary and display the planned route alongside the actual handling events.
+
+[00:47:25] Anna: Alright, I think we've covered the domain thoroughly. Let me take a photo of the board. This has been an incredibly productive session — we went from a monolithic "cargo table" to a clean bounded context design with clear ownership and well-defined integration patterns.
+
+[00:47:45] Marcus: The key insight for me was that Delivery is derived. That's going to eliminate so many bugs.
+
+[00:47:55] James: And for me, separating Tracking from Booking. We've been conflating recording events with interpreting them. Those are fundamentally different responsibilities.
+
+[00:48:08] Sofia: I liked the Specification pattern for route matching. That's elegant.
+
+[00:48:15] Raj: From a systems perspective, the event-driven integration between Tracking and Booking is exactly what we need. Eventual consistency is fine for our use case, and it gives us independent scalability.
+
+[00:48:30] Anna: Great. Let me summarize the action items. We need to: one, build out the detailed DMML model from this session. Two, investigate the three hotspots. Three, prototype the Delivery derivation logic to make sure it handles out-of-order events correctly. Four, decide on the technology for the routing engine integration.
+
+[00:48:55] Anna: Thanks everyone. This is one of the clearest Event Storming outcomes I've seen. The domain is rich but well-structured. Evans would be proud.
+
+[00:49:05] Marcus: He literally wrote the book on this domain, so I'd hope so!
+(laughter)
+
+[00:49:12] Anna: Fair point. Let's wrap up. I'll circulate the photos and the model by end of week.
+
+--- END OF TRANSCRIPT ---

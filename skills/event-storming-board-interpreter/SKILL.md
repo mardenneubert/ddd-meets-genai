@@ -162,6 +162,29 @@ Work through the board left-to-right, top-to-bottom:
    `triggers`, `receives`, `produces`). Only encode relationships that
    are **visible from the board layout** — don't infer missing ones.
 
+   **Non-canonical layouts are common.** Real boards don't always follow
+   the canonical left-to-right flow. Watch for these patterns:
+
+   - **Aggregate to the right of events:** Sometimes events are stacked
+     vertically between the command and the aggregate (e.g., Command →
+     Events ↓ ... with Aggregate to the right). The aggregate still
+     receives that command and produces those events — the spatial
+     relationship is just arranged differently.
+   - **Vertical event chains:** Multiple events stacked vertically at
+     the same x-position, often connected by downward arrows, typically
+     all originate from the same command. Include all connected events
+     in the command's `emits` list.
+   - **Single aggregate in a group:** When a group/context zone contains
+     exactly one aggregate, one or more commands, and events, the
+     commands in that group almost certainly target that aggregate and
+     the events are almost certainly produced by it — even if the
+     spatial arrangement doesn't match the canonical pattern exactly.
+
+   The key principle: **within a group, connect the elements.** An
+   aggregate, commands, and events coexisting in the same group are
+   related. Don't leave an aggregate orphaned (empty `receives` and
+   `produces`) when commands and events exist in its group.
+
 6. **Capture annotations.** Hotspots (neon pink, often tilted),
    opportunities, values, and constraints. Link them to nearby elements
    via the `near` or `applies_to` fields.
@@ -209,6 +232,14 @@ Before outputting, check:
    `big_picture` board unless they're actually visible.
 6. **No invented elements.** Every element in the output must
    correspond to something visible on the board image.
+7. **No orphaned aggregates.** If an aggregate has empty `receives`
+   and `produces` but its group contains commands and/or events,
+   something was missed. Review the spatial layout — the aggregate
+   almost certainly receives at least one command and produces at
+   least one event within its group.
+8. **No untargeted commands.** If a command has no `targets` field
+   but an aggregate exists in the same group, the command likely
+   targets that aggregate. Review and populate `targets`.
 
 If any issues are found, fix them before outputting.
 
@@ -249,3 +280,10 @@ After saving the file, report a brief summary:
 - **Don't forget the provenance.** Every element needs an `origin`. This
   is what makes ESML verifiable. If you can't provide a bounding box,
   at minimum reference the source image.
+
+- **Don't leave aggregates disconnected.** The most common transcription
+  error is leaving an aggregate with empty `receives`/`produces` because
+  the board layout doesn't match the canonical Command → Aggregate →
+  Event left-to-right pattern. If an aggregate exists in a group, it is
+  there because it participates in the command/event flow of that group.
+  Connect it.

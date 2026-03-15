@@ -1,0 +1,1078 @@
+dmml: "0.1.0"
+
+model:
+  name: "Cargo Shipping"
+  description: >
+    Domain model for an international cargo shipping system, based on Eric
+    Evans' canonical DDD example from "Domain-Driven Design: Tackling
+    Complexity in the Heart of Software" (2003). Covers cargo booking, route
+    assignment, handling event tracking, delivery status derivation, and
+    misdirection detection.
+  status: accepted
+  date: "2026-03-15"
+  authors:
+    - "Eric Evans (original domain)"
+    - "Marden Neubert (DMML adaptation)"
+  notes: >
+    This reference model follows the dddsample-core reference implementation
+    (citerus/dddsample-core), which evolved Evans' original Blue Book model
+    (Chapters 1-7) in several significant ways. The book's Chapter 7 model
+    uses Delivery Specification (VALUE OBJECT) and Delivery History (ENTITY
+    inside the Cargo AGGREGATE) with Carrier Movement as a standalone
+    AGGREGATE root. The dddsample-core refined this into: (1) Route
+    Specification replacing Delivery Specification, (2) Delivery as a fully
+    derived value object replacing the Delivery History entity — recalculated
+    from scratch on every handling event, never directly set, (3) Voyage as
+    an aggregate containing Carrier Movements, replacing Carrier Movement as
+    a standalone aggregate root, and (4) explicit Bounded Contexts (Booking,
+    Tracking, Voyage, Location) which the book does not define for this
+    domain. The book also includes a Customer entity with roles (shipper,
+    receiver) omitted here. The Specification pattern for route matching and
+    misdirection detection as a policy are consistent across both versions.
+
+# =============================================================================
+# STRATEGIC DESIGN
+# =============================================================================
+
+subdomains:
+  - id: sd-shipping
+    name: "Shipping"
+    classification: core
+    description: >
+      The heart of the business: booking cargo, specifying routes, assigning
+      itineraries, and managing the full cargo lifecycle from booking to
+      delivery. This is what differentiates the company from competitors.
+    business_value: >
+      Direct revenue generation through cargo transport. Competitive
+      advantage comes from superior routing, reliable delivery tracking,
+      and proactive misdirection detection.
+    status: accepted
+    notes: >
+      Evans explicitly identifies Shipping as the core domain. The Cargo
+      aggregate, RouteSpecification, Itinerary, and Delivery concepts are
+      all within this subdomain.
+
+  - id: sd-voyage-management
+    name: "Voyage Management"
+    classification: supporting
+    description: >
+      Manages the schedule of voyages — ships traveling between ports on
+      defined schedules. Necessary for routing and itinerary construction
+      but not the primary differentiator.
+    business_value: >
+      Enables route planning and itinerary assignment. Without voyage
+      schedules, cargo cannot be routed.
+    status: accepted
+    notes: >
+      Voyage management is supporting because the shipping company needs it
+      to operate but it doesn't differentiate them. Voyage schedules could
+      potentially be sourced from an external system.
+
+  - id: sd-location
+    name: "Location"
+    classification: generic
+    description: >
+      Reference data for ports, cities, and logistics locations. Standard
+      across the industry — UN/LOCODE is the typical standard.
+    business_value: "Shared reference data. No competitive advantage."
+    status: accepted
+    notes: >
+      Locations are generic — every shipping company uses the same port
+      codes. Could be replaced with an external reference data service.
+
+  - id: sd-routing
+    name: "Routing"
+    classification: supporting
+    description: >
+      The algorithmic capability of finding optimal itineraries for cargo
+      given route specifications and available voyages.
+    business_value: >
+      Better routing means faster delivery and lower costs. Important but
+      the algorithm itself is not the core business — it's a means to
+      better serve the core shipping domain.
+    status: accepted
+    notes: >
+      Evans treats the routing engine as a partially external system. The
+      RoutingService in the Booking context interfaces with it through an
+      anticorruption layer. The routing algorithm could be third-party.
+
+bounded_contexts:
+  - id: bc-booking
+    name: "Booking"
+    subdomain: sd-shipping
+    description: >
+      Handles cargo booking, route specification, and itinerary assignment.
+      This is where customers interact with the system to arrange cargo
+      transport. Owns the Cargo aggregate and its full lifecycle from
+      booking through delivery confirmation.
+    responsibilities:
+      - "Accept and validate new cargo bookings"
+      - "Capture route specifications (origin, destination, deadline)"
+      - "Request and assign itineraries from the routing service"
+      - "Handle destination changes and re-routing"
+      - "Derive and expose cargo delivery status"
+      - "Detect cargo misdirection based on handling events"
+    status: accepted
+    notes: >
+      The Booking context is the richest context in the model. It owns the
+      Cargo aggregate, which is the central concept. Delivery status is
+      derived here from handling events received from the Tracking context.
+      The misdirection detection policy lives here because it requires
+      knowledge of both the itinerary (Booking's data) and handling events
+      (Tracking's data).
+
+    ubiquitous_language:
+      - id: term-cargo
+        term: "Cargo"
+        definition: >
+          A unit of goods being transported from an origin to a destination.
+          Identified by a unique tracking ID. Has a route specification
+          describing the desired transport, an itinerary describing the
+          planned transport, and a delivery status derived from handling
+          events.
+      - id: term-tracking-id
+        term: "Tracking ID"
+        definition: >
+          A unique identifier assigned to a cargo at booking time. Used by
+          customers and operations staff to track the cargo through its
+          lifecycle.
+      - id: term-route-specification
+        term: "Route Specification"
+        definition: >
+          The customer's requirements for cargo transport: where it starts
+          (origin), where it must arrive (destination), and when it must
+          arrive by (arrival deadline). Uses the Specification pattern —
+          an itinerary either satisfies the route specification or it
+          doesn't.
+      - id: term-itinerary
+        term: "Itinerary"
+        definition: >
+          A planned route for cargo transport, consisting of one or more
+          legs. Each leg specifies a voyage and the load/unload locations
+          within that voyage. An itinerary is assigned to a cargo to
+          satisfy its route specification.
+      - id: term-leg
+        term: "Leg"
+        definition: >
+          A single segment of an itinerary — cargo travels on a specific
+          voyage from a load location to an unload location.
+      - id: term-delivery
+        term: "Delivery"
+        definition: >
+          The derived current state of a cargo's transport. Never directly
+          set — always calculated from the history of handling events
+          compared against the itinerary. Includes transport status,
+          current location, whether the cargo is misdirected, and ETA.
+      - id: term-misdirected
+        term: "Misdirected"
+        definition: >
+          A cargo is misdirected when a handling event occurs that is
+          inconsistent with the itinerary. For example, if cargo is
+          unloaded at a port that is not part of any leg in the itinerary.
+
+    aggregates:
+      - id: agg-cargo
+        name: "Cargo"
+        description: >
+          The central aggregate in the domain. Represents a unit of cargo
+          being shipped. Enforces invariants around route specification,
+          itinerary assignment, and delivery derivation.
+        status: accepted
+        notes: >
+          Evans' primary example aggregate. The Cargo aggregate owns
+          RouteSpecification, Itinerary, and Delivery as value objects.
+          HandlingEvents are NOT part of this aggregate — they belong to
+          the Tracking context and are received as domain events.
+
+        root_entity:
+          id: ent-cargo
+          name: "Cargo"
+          identity:
+            field: trackingId
+            type: TrackingId
+            generation: system
+          lifecycle:
+            - Booked
+            - Routed
+            - InTransit
+            - Claimed
+          attributes:
+            - name: trackingId
+              type: TrackingId
+              description: "Unique identifier for tracking this cargo"
+            - name: routeSpecification
+              type: RouteSpecification
+              description: "Customer's transport requirements"
+            - name: itinerary
+              type: Itinerary
+              description: "Planned route — null until assigned"
+              nullable: true
+            - name: delivery
+              type: Delivery
+              description: "Derived delivery status — recalculated on each handling event"
+          status: accepted
+          notes: >
+            The Cargo entity is intentionally thin on direct attributes.
+            Most of its richness comes from the value objects it contains.
+            The delivery attribute is always derived, never directly set.
+
+        value_objects:
+          - id: vo-route-specification
+            name: "RouteSpecification"
+            attributes:
+              - name: origin
+                type: Location
+                description: "Where the cargo starts its journey"
+              - name: destination
+                type: Location
+                description: "Where the cargo must arrive"
+              - name: arrivalDeadline
+                type: Date
+                description: "Latest acceptable arrival date"
+            equality: all_attributes
+            status: accepted
+            notes: >
+              Evans' Specification pattern. RouteSpecification has a method
+              isSatisfiedBy(Itinerary) that checks whether a proposed
+              itinerary meets the requirements. Origin and destination are
+              Location references (UN/LOCODE ports).
+
+          - id: vo-itinerary
+            name: "Itinerary"
+            attributes:
+              - name: legs
+                type: Leg[]
+                description: "Ordered list of transport segments"
+            equality: all_attributes
+            status: accepted
+            notes: >
+              An itinerary is the planned route. It consists of an ordered
+              sequence of Legs. The first leg's load location should match
+              the route specification's origin; the last leg's unload
+              location should match the destination. An empty itinerary
+              means the cargo is not yet routed.
+
+          - id: vo-leg
+            name: "Leg"
+            attributes:
+              - name: voyageId
+                type: VoyageNumber
+                description: "Reference to the voyage this leg travels on"
+              - name: loadLocation
+                type: Location
+                description: "Where cargo is loaded onto the vessel"
+              - name: unloadLocation
+                type: Location
+                description: "Where cargo is unloaded from the vessel"
+              - name: loadTime
+                type: DateTime
+                description: "Expected loading time"
+              - name: unloadTime
+                type: DateTime
+                description: "Expected unloading time"
+            equality: all_attributes
+            status: accepted
+            notes: >
+              A Leg references a Voyage by ID rather than containing it —
+              Voyages are in a separate bounded context. The load/unload
+              locations define the segment within that voyage where this
+              cargo is aboard.
+
+          - id: vo-delivery
+            name: "Delivery"
+            attributes:
+              - name: transportStatus
+                type: TransportStatus
+                description: "NOT_RECEIVED, IN_PORT, ONBOARD_CARRIER, CLAIMED, UNKNOWN"
+              - name: lastKnownLocation
+                type: Location
+                description: "Where the cargo was last seen"
+                nullable: true
+              - name: currentVoyage
+                type: VoyageNumber
+                description: "Which voyage the cargo is currently on"
+                nullable: true
+              - name: isMisdirected
+                type: boolean
+                description: "True if last handling event is inconsistent with itinerary"
+              - name: eta
+                type: DateTime
+                description: "Estimated time of arrival at destination"
+                nullable: true
+              - name: isUnloadedAtDestination
+                type: boolean
+                description: "True if cargo has been unloaded at the final destination"
+              - name: routingStatus
+                type: RoutingStatus
+                description: "NOT_ROUTED, ROUTED, MISROUTED"
+            equality: all_attributes
+            status: accepted
+            notes: >
+              This is the key insight from Evans: Delivery is ALWAYS derived.
+              It is recalculated from scratch whenever a new HandlingEvent
+              is received or the itinerary changes. The derivation logic
+              compares the latest handling event against the itinerary to
+              determine transport status, misdirection, and ETA. This
+              eliminates an entire class of state synchronization bugs.
+
+        invariants:
+          - "A cargo must have a route specification at all times after booking"
+          - "Delivery status must be derived from handling history — never directly set"
+          - "If an itinerary is assigned, it must satisfy the route specification"
+          - "A cargo's tracking ID is immutable after creation"
+
+        domain_events:
+          - id: evt-cargo-booked
+            name: "Cargo Booked"
+            description: >
+              Emitted when a new cargo is registered in the system with a
+              route specification.
+            emitted_on: "Cargo creation (transition to Booked)"
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: origin, type: Location }
+              - { name: destination, type: Location }
+              - { name: arrivalDeadline, type: Date }
+              - { name: bookedAt, type: DateTime }
+            consumed_by:
+              - bc-tracking
+            status: accepted
+            notes: >
+              This event signals that a new cargo exists and needs to be
+              tracked. The Tracking context subscribes to set up tracking
+              for this cargo.
+
+          - id: evt-cargo-routed
+            name: "Cargo Routed"
+            description: >
+              Emitted when an itinerary is assigned to a cargo, satisfying
+              its route specification.
+            emitted_on: "Itinerary assignment (transition to Routed)"
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: itinerary, type: Itinerary }
+            consumed_by:
+              - bc-tracking
+            status: accepted
+
+          - id: evt-cargo-destination-changed
+            name: "Cargo Destination Changed"
+            description: >
+              Emitted when a customer changes the destination of a cargo,
+              requiring a new route specification and potentially a new
+              itinerary.
+            emitted_on: "Route specification update"
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: newRouteSpecification, type: RouteSpecification }
+              - { name: oldDestination, type: Location }
+              - { name: newDestination, type: Location }
+            status: accepted
+            notes: >
+              When the destination changes, the existing itinerary (if any)
+              may no longer satisfy the route specification. The cargo
+              returns to a state where it needs re-routing.
+
+          - id: evt-cargo-misdirected
+            name: "Cargo Misdirected"
+            description: >
+              Emitted when a handling event is detected that is inconsistent
+              with the cargo's itinerary.
+            emitted_on: "Delivery derivation detects inconsistency"
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: handlingEventType, type: HandlingEventType }
+              - { name: location, type: Location }
+              - { name: expectedNextLocation, type: Location }
+            status: accepted
+            notes: >
+              This is detected by the misdirection policy in the Booking
+              context. When a handling event arrives from Tracking, the
+              Delivery is re-derived. If the new Delivery shows
+              isMisdirected=true, this event is emitted to alert operations.
+
+          - id: evt-cargo-delivered
+            name: "Cargo Delivered"
+            description: >
+              Emitted when cargo has been claimed at the final destination.
+            emitted_on: "Delivery derivation detects CLAIMED at destination"
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: deliveredAt, type: DateTime }
+              - { name: destination, type: Location }
+            status: accepted
+
+        commands:
+          - id: cmd-book-cargo
+            name: "Book Cargo"
+            description: >
+              Register a new cargo with origin, destination, and arrival
+              deadline.
+            attributes:
+              - { name: origin, type: Location }
+              - { name: destination, type: Location }
+              - { name: arrivalDeadline, type: Date }
+            preconditions:
+              - "Origin and destination must be valid, known locations"
+              - "Origin and destination must be different"
+              - "Arrival deadline must be in the future"
+            emits:
+              - evt-cargo-booked
+            status: accepted
+
+          - id: cmd-assign-itinerary
+            name: "Assign Itinerary"
+            description: >
+              Assign a planned route (itinerary) to a cargo. The itinerary
+              must satisfy the cargo's route specification.
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: itinerary, type: Itinerary }
+            preconditions:
+              - "Cargo must exist and be in Booked or Routed state"
+              - "Itinerary must satisfy the cargo's route specification"
+            emits:
+              - evt-cargo-routed
+            status: accepted
+            notes: >
+              The itinerary is typically obtained from the RoutingService.
+              The command validates it against the RouteSpecification
+              before accepting.
+
+          - id: cmd-change-destination
+            name: "Change Destination"
+            description: "Update the cargo's route specification with a new destination."
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: newDestination, type: Location }
+            preconditions:
+              - "Cargo must not be CLAIMED"
+              - "New destination must be different from current destination"
+              - "New destination must be a valid location"
+            emits:
+              - evt-cargo-destination-changed
+            status: accepted
+
+          - id: cmd-derive-delivery
+            name: "Derive Delivery"
+            description: >
+              Internal command to re-derive the Delivery value object from
+              the cargo's handling history and current itinerary. Triggered
+              by the delivery derivation policy when a handling event arrives.
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: handlingEvent, type: HandlingEvent }
+            preconditions:
+              - "Cargo must exist"
+            emits:
+              - evt-cargo-misdirected
+              - evt-cargo-delivered
+            status: accepted
+            notes: >
+              This is an internal command — not directly issued by a user.
+              It is issued by the pol-derive-delivery-on-handling policy
+              in response to CargoHandled events. It may emit
+              CargoMisdirected or CargoDelivered depending on the
+              derivation result.
+
+        repository:
+          id: repo-cargo
+          name: "CargoRepository"
+          operations:
+            - "save"
+            - "findByTrackingId"
+            - "findAll"
+          status: accepted
+
+        factory:
+          id: fac-cargo
+          name: "CargoFactory"
+          description: >
+            Creates a new Cargo with a generated tracking ID, the given
+            route specification, and an initial derived Delivery status
+            (NOT_RECEIVED, not routed, not misdirected).
+          status: accepted
+          notes: >
+            Factory is justified because Cargo creation involves generating
+            a tracking ID, initializing the Delivery value object to its
+            default derived state, and validating the route specification.
+
+        specifications:
+          - id: spec-route-satisfied
+            name: "Route Specification Satisfied"
+            description: >
+              Determines whether a given itinerary satisfies a route
+              specification: the first leg's load location matches the
+              origin, the last leg's unload location matches the
+              destination, and the final unload time is before the arrival
+              deadline.
+            predicate: >
+              itinerary.firstLeg.loadLocation == routeSpec.origin &&
+              itinerary.lastLeg.unloadLocation == routeSpec.destination &&
+              itinerary.lastLeg.unloadTime <= routeSpec.arrivalDeadline
+            status: accepted
+            notes: >
+              This is Evans' canonical example of the Specification pattern.
+              RouteSpecification.isSatisfiedBy(Itinerary) encapsulates the
+              matching logic.
+
+    domain_services:
+      - id: svc-routing
+        name: "Routing Service"
+        description: >
+          Finds itineraries that satisfy a given route specification. Interfaces
+          with the external routing engine through an anticorruption layer.
+        operations:
+          - name: fetchRoutesForSpecification
+            params: [{ name: routeSpec, type: RouteSpecification }]
+            returns: "Itinerary[]"
+        status: accepted
+        notes: >
+          Evans' key domain service example. The RoutingService is defined in
+          the Booking context but delegates to the external Routing context
+          for the actual path-finding algorithm. The interface is expressed in
+          domain terms (RouteSpecification, Itinerary) not in infrastructure
+          terms.
+
+    policies:
+      - id: pol-derive-delivery-on-handling
+        name: "Derive Delivery on Handling Event"
+        description: >
+          Whenever a handling event is received for a cargo, re-derive the
+          cargo's Delivery value object from the full handling history and
+          current itinerary.
+        trigger_events:
+          - evt-cargo-handled
+        issues_commands:
+          - cmd-derive-delivery
+        rule: >
+          When a handling event for a cargo is received from Tracking,
+          re-derive the Delivery value object. If the new Delivery shows
+          isMisdirected=true and the previous did not, emit CargoMisdirected.
+          If the new Delivery shows isUnloadedAtDestination=true, emit
+          CargoDelivered.
+        status: accepted
+        notes: >
+          This is the core pattern: Delivery is never stored directly. It's
+          always calculated. The policy bridges the Tracking context (which
+          owns handling events) to the Booking context (which owns cargo
+          and delivery status). The evt-cargo-handled event originates in
+          the Tracking context.
+
+    application_services:
+      - id: app-book-cargo
+        name: "Book Cargo Service"
+        description: >
+          Orchestrates the cargo booking use case: validates input, creates
+          cargo via factory, persists via repository, publishes CargoBooked.
+        use_case: "Customer books a new cargo"
+        coordinates:
+          - repo-cargo
+          - fac-cargo
+        handles:
+          - cmd-book-cargo
+        status: accepted
+
+      - id: app-assign-itinerary
+        name: "Assign Itinerary Service"
+        description: >
+          Orchestrates itinerary assignment: fetches routes via routing
+          service, validates against route specification, assigns to cargo.
+        use_case: "Operations assigns an itinerary to a cargo"
+        coordinates:
+          - repo-cargo
+          - svc-routing
+        handles:
+          - cmd-assign-itinerary
+        status: accepted
+
+    read_models:
+      - id: rm-cargo-tracking
+        name: "Cargo Tracking View"
+        description: >
+          Read-optimized projection showing current cargo status for
+          customer-facing tracking. Includes tracking ID, origin,
+          destination, current status, last known location, and ETA.
+        subscribes_to:
+          - evt-cargo-booked
+          - evt-cargo-routed
+          - evt-cargo-misdirected
+          - evt-cargo-delivered
+        attributes:
+          - { name: trackingId, type: TrackingId }
+          - { name: origin, type: string }
+          - { name: destination, type: string }
+          - { name: transportStatus, type: string }
+          - { name: lastKnownLocation, type: string }
+          - { name: eta, type: DateTime }
+          - { name: isMisdirected, type: boolean }
+        consumers:
+          - "Customer tracking portal"
+          - "Customer service dashboard"
+        status: accepted
+
+  # ---------------------------------------------------------------------------
+  # TRACKING CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-tracking
+    name: "Tracking"
+    subdomain: sd-shipping
+    description: >
+      Records what physically happens to cargo at ports and during voyages.
+      Owns the handling event history — the factual record of cargo
+      movements. Does NOT derive meaning from these events (that's Booking's
+      job).
+    responsibilities:
+      - "Record handling events (receive, load, unload, customs, claim)"
+      - "Validate handling events against known cargo and voyages"
+      - "Publish handling events for downstream consumers"
+    status: accepted
+    notes: >
+      Evans separates Tracking from Booking because they have different
+      rates of change and different consistency requirements. Handling
+      events arrive in near-real-time from port operations. The Tracking
+      context is an event publisher — it doesn't interpret what the events
+      mean for delivery status.
+
+    ubiquitous_language:
+      - id: term-handling-event
+        term: "Handling Event"
+        definition: >
+          A discrete physical event in the lifecycle of a cargo: receiving
+          it at the origin, loading it onto a vessel, unloading at a port,
+          clearing customs, or the customer claiming it at the destination.
+      - id: term-handling-event-type
+        term: "Handling Event Type"
+        definition: >
+          The type of physical activity: RECEIVE, LOAD, UNLOAD, CUSTOMS,
+          CLAIM. Each type has specific validation rules about what state
+          the cargo should be in.
+
+    aggregates:
+      - id: agg-handling-event
+        name: "Handling Event"
+        description: >
+          Records an individual handling activity for a cargo. Each event is
+          immutable once created — it represents a fact about what happened.
+        status: accepted
+        notes: >
+          In the dddsample reference implementation, HandlingEvent is part
+          of a HandlingHistory within the Cargo aggregate. Here we separate
+          it into its own context following Evans' later guidance about
+          context separation. The Tracking context owns the facts; the
+          Booking context owns the interpretation.
+
+        root_entity:
+          id: ent-handling-event
+          name: "HandlingEvent"
+          identity:
+            field: eventId
+            type: UUID
+            generation: system
+          attributes:
+            - name: eventId
+              type: UUID
+              description: "Unique event identifier"
+            - name: trackingId
+              type: TrackingId
+              description: "Which cargo this event is about"
+            - name: eventType
+              type: HandlingEventType
+              description: "RECEIVE, LOAD, UNLOAD, CUSTOMS, CLAIM"
+            - name: location
+              type: Location
+              description: "Where the event occurred"
+            - name: completionTime
+              type: DateTime
+              description: "When the physical activity was completed"
+            - name: registrationTime
+              type: DateTime
+              description: "When the event was registered in the system"
+            - name: voyageNumber
+              type: VoyageNumber
+              description: "Which voyage, for LOAD and UNLOAD events"
+              nullable: true
+          status: accepted
+          notes: >
+            HandlingEvent is immutable — once registered, it cannot be
+            changed. If an error is made, a corrective event is registered.
+            VoyageNumber is only required for LOAD and UNLOAD events.
+
+        invariants:
+          - "A handling event is immutable once created"
+          - "LOAD and UNLOAD events must reference a voyage"
+          - "RECEIVE, CUSTOMS, and CLAIM events must not reference a voyage"
+          - "The cargo referenced by trackingId must exist"
+          - "CompletionTime must not be in the future"
+
+        domain_events:
+          - id: evt-cargo-handled
+            name: "Cargo Handled"
+            description: >
+              Published whenever a handling event is registered. This is the
+              primary integration event between Tracking and Booking.
+            emitted_on: "Handling event registration"
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: eventType, type: HandlingEventType }
+              - { name: location, type: Location }
+              - { name: voyageNumber, type: VoyageNumber }
+              - { name: completionTime, type: DateTime }
+            consumed_by:
+              - bc-booking
+              - pol-derive-delivery-on-handling
+            status: accepted
+
+        commands:
+          - id: cmd-register-handling-event
+            name: "Register Handling Event"
+            description: "Record a cargo handling activity at a location."
+            attributes:
+              - { name: trackingId, type: TrackingId }
+              - { name: eventType, type: HandlingEventType }
+              - { name: location, type: Location }
+              - { name: completionTime, type: DateTime }
+              - { name: voyageNumber, type: VoyageNumber }
+            preconditions:
+              - "Cargo with given trackingId must exist"
+              - "If eventType is LOAD or UNLOAD, voyageNumber is required"
+              - "If eventType is RECEIVE, CUSTOMS, or CLAIM, voyageNumber must be null"
+              - "Location must be a valid, known location"
+            emits:
+              - evt-cargo-handled
+            status: accepted
+
+        repository:
+          id: repo-handling-event
+          name: "HandlingEventRepository"
+          operations:
+            - "save"
+            - "findByTrackingId"
+            - "findMostRecentByTrackingId"
+          status: accepted
+
+    application_services:
+      - id: app-register-handling-event
+        name: "Register Handling Event Service"
+        description: >
+          Orchestrates handling event registration: validates input, creates
+          the event, persists, and publishes CargoHandled.
+        use_case: "Port operations staff registers a cargo handling activity"
+        coordinates:
+          - repo-handling-event
+        handles:
+          - cmd-register-handling-event
+        status: accepted
+
+  # ---------------------------------------------------------------------------
+  # VOYAGE CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-voyage
+    name: "Voyage"
+    subdomain: sd-voyage-management
+    description: >
+      Manages the schedules of voyages — ships traveling between ports on
+      defined timetables. A voyage consists of a sequence of carrier
+      movements defining the ship's journey.
+    responsibilities:
+      - "Maintain voyage schedules and carrier movements"
+      - "Provide voyage information for itinerary construction"
+      - "Track schedule changes and delays"
+    status: accepted
+    notes: >
+      The Voyage context is relatively simple. It primarily serves as
+      reference data for the Booking context (itinerary construction) and
+      the Tracking context (validating handling events against voyages).
+
+    ubiquitous_language:
+      - id: term-voyage
+        term: "Voyage"
+        definition: >
+          A specific journey of a vessel, identified by a voyage number
+          (e.g., V100). Consists of a schedule of carrier movements
+          between ports.
+      - id: term-carrier-movement
+        term: "Carrier Movement"
+        definition: >
+          A single segment of a voyage — the vessel travels from a
+          departure location to an arrival location on a scheduled
+          timetable.
+
+    aggregates:
+      - id: agg-voyage
+        name: "Voyage"
+        description: >
+          A ship's scheduled journey. The aggregate contains the schedule
+          of carrier movements and any amendments.
+        status: accepted
+
+        root_entity:
+          id: ent-voyage
+          name: "Voyage"
+          identity:
+            field: voyageNumber
+            type: VoyageNumber
+            generation: user
+          lifecycle:
+            - Scheduled
+            - InProgress
+            - Completed
+          attributes:
+            - name: voyageNumber
+              type: VoyageNumber
+              description: "Unique voyage identifier (e.g., V100, V200)"
+            - name: schedule
+              type: CarrierMovement[]
+              description: "Ordered list of port-to-port movements"
+          status: accepted
+
+        value_objects:
+          - id: vo-carrier-movement
+            name: "CarrierMovement"
+            attributes:
+              - name: departureLocation
+                type: Location
+                description: "Port of departure"
+              - name: arrivalLocation
+                type: Location
+                description: "Port of arrival"
+              - name: departureTime
+                type: DateTime
+                description: "Scheduled departure time"
+              - name: arrivalTime
+                type: DateTime
+                description: "Scheduled arrival time"
+            equality: all_attributes
+            status: accepted
+
+        invariants:
+          - "A voyage must have at least one carrier movement"
+          - "Carrier movements must be in chronological order"
+          - "Each movement's arrival location must match the next movement's departure location"
+
+        domain_events:
+          - id: evt-voyage-scheduled
+            name: "Voyage Scheduled"
+            emitted_on: "New voyage creation"
+            attributes:
+              - { name: voyageNumber, type: VoyageNumber }
+              - { name: schedule, type: "CarrierMovement[]" }
+            status: accepted
+
+          - id: evt-voyage-delayed
+            name: "Voyage Delayed"
+            emitted_on: "Schedule amendment"
+            attributes:
+              - { name: voyageNumber, type: VoyageNumber }
+              - { name: delayedMovementIndex, type: int }
+              - { name: newDepartureTime, type: DateTime }
+              - { name: newArrivalTime, type: DateTime }
+            consumed_by:
+              - bc-booking
+            status: proposed
+            notes: >
+              Voyage delays affect ETAs of cargo on that voyage. The Booking
+              context needs to recalculate Delivery when a voyage is delayed.
+
+        commands:
+          - id: cmd-schedule-voyage
+            name: "Schedule Voyage"
+            attributes:
+              - { name: voyageNumber, type: VoyageNumber }
+              - { name: schedule, type: "CarrierMovement[]" }
+            preconditions:
+              - "Voyage number must be unique"
+              - "Schedule must have at least one carrier movement"
+            emits:
+              - evt-voyage-scheduled
+            status: accepted
+
+        repository:
+          id: repo-voyage
+          name: "VoyageRepository"
+          operations:
+            - "save"
+            - "findByVoyageNumber"
+          status: accepted
+
+  # ---------------------------------------------------------------------------
+  # ROUTING CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-routing
+    name: "Routing"
+    subdomain: sd-routing
+    description: >
+      External or semi-external context providing route-finding capabilities.
+      Given a route specification and available voyages, finds optimal
+      itineraries.
+    responsibilities:
+      - "Find candidate itineraries for a given route specification"
+      - "Optimize routes based on cost, time, and availability"
+    status: accepted
+    notes: >
+      Evans treats this as partially external — the Booking context's
+      RoutingService provides the domain-facing interface, while the actual
+      algorithm may be a third-party system. In the dddsample reference
+      implementation, this is backed by a graph traversal algorithm.
+
+    domain_services:
+      - id: svc-route-finder
+        name: "Route Finder Service"
+        description: >
+          The core algorithmic service that computes itineraries from
+          available voyages and a route specification.
+        operations:
+          - name: findOptimalRoutes
+            params:
+              - { name: origin, type: Location }
+              - { name: destination, type: Location }
+              - { name: deadline, type: Date }
+            returns: "Itinerary[]"
+        status: accepted
+
+  # ---------------------------------------------------------------------------
+  # LOCATION CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-location
+    name: "Location"
+    subdomain: sd-location
+    description: >
+      Reference data context for ports and logistics locations. Provides
+      the shared vocabulary of places used by all other contexts.
+    responsibilities:
+      - "Maintain the registry of known locations (ports, terminals)"
+      - "Provide location lookup by UN/LOCODE"
+    status: accepted
+    notes: >
+      This is the simplest context — essentially a reference data service.
+      Locations are shared across all contexts but owned here.
+
+    aggregates:
+      - id: agg-location
+        name: "Location"
+        description: "A port or logistics location in the global network."
+        status: accepted
+
+        root_entity:
+          id: ent-location
+          name: "Location"
+          identity:
+            field: unlocode
+            type: UnLocode
+            generation: external
+          attributes:
+            - name: unlocode
+              type: UnLocode
+              description: "UN/LOCODE identifier (e.g., USNYC, SESTO, CNHKG)"
+            - name: name
+              type: string
+              description: "Human-readable name (e.g., New York, Stockholm, Hong Kong)"
+          status: accepted
+
+        invariants:
+          - "UN/LOCODE must be a valid 5-character code"
+          - "Location name must not be empty"
+
+        repository:
+          id: repo-location
+          name: "LocationRepository"
+          operations:
+            - "findByUnlocode"
+            - "findAll"
+          status: accepted
+
+# =============================================================================
+# CONTEXT MAP
+# =============================================================================
+
+context_map:
+  description: >
+    Integration topology for the Cargo Shipping domain. The Booking context
+    is the hub — it consumes events from Tracking, queries Routing for
+    itineraries, and references Location for port data.
+  status: accepted
+  notes: >
+    The map reflects Evans' design where Booking is the rich core context
+    and other contexts serve it with data and capabilities. The key
+    integration pattern is events: Tracking publishes handling events that
+    Booking consumes to derive delivery status.
+
+  relationships:
+    - id: rel-booking-tracking
+      name: "Booking ← Tracking"
+      type: customer_supplier
+      upstream: bc-tracking
+      downstream: bc-booking
+      description: >
+        Tracking publishes handling events. Booking consumes them to derive
+        cargo delivery status. Booking's needs influence what data Tracking
+        includes in handling events.
+      integration_style: events
+      status: accepted
+      notes: >
+        This is the primary integration point. The CargoHandled event flows
+        from Tracking to Booking, triggering the delivery derivation policy.
+        Evans describes this as asynchronous — Booking doesn't need
+        real-time consistency with Tracking.
+
+    - id: rel-booking-routing
+      name: "Booking → Routing"
+      type: anticorruption_layer
+      upstream: bc-routing
+      downstream: bc-booking
+      description: >
+        Booking's RoutingService acts as an ACL, translating between
+        Booking's domain language (RouteSpecification, Itinerary) and the
+        Routing engine's internal representation.
+      integration_style: api
+      status: accepted
+      notes: >
+        Evans' canonical ACL example. The RoutingService in Booking
+        translates RouteSpecification into a query the routing engine
+        understands, and translates the routing engine's response back
+        into Itinerary objects.
+
+    - id: rel-booking-voyage
+      name: "Booking ← Voyage"
+      type: conformist
+      upstream: bc-voyage
+      downstream: bc-booking
+      description: >
+        Booking conforms to Voyage's model for voyage numbers and schedules.
+        Itinerary Legs reference voyages by VoyageNumber.
+      integration_style: api
+      status: accepted
+      notes: >
+        Booking doesn't translate voyage data — it uses VoyageNumber
+        references directly. This is a conformist relationship because
+        Booking accepts Voyage's model as-is.
+
+    - id: rel-tracking-voyage
+      name: "Tracking ← Voyage"
+      type: conformist
+      upstream: bc-voyage
+      downstream: bc-tracking
+      description: >
+        Tracking references voyages when recording LOAD/UNLOAD events.
+        Conforms to Voyage's voyage number scheme.
+      integration_style: api
+      status: accepted
+
+    - id: rel-all-location
+      name: "All Contexts ← Location"
+      type: [open_host_service, published_language]
+      upstream: bc-location
+      downstream: bc-booking
+      description: >
+        Location provides a shared reference data service used by all
+        contexts. UN/LOCODE is the published language.
+      integration_style: api
+      status: accepted
+      notes: >
+        Location is a generic context providing reference data through an
+        OHS with Published Language (UN/LOCODE standard). All contexts
+        reference locations by UnLocode.
