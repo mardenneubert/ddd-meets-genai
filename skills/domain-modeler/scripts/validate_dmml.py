@@ -310,16 +310,16 @@ class DmmlValidator:
             if isinstance(cmd, dict) and not cmd.get("preconditions"):
                 self.warn(f"Command '{cmd.get('id', '?')}' has no preconditions")
 
-        # Check entities have fields
+        # Check entities have attributes
         for ent in agg.get("entities") or []:
-            if isinstance(ent, dict) and not ent.get("fields"):
-                self.warn(f"Entity '{ent.get('id', '?')}' has no fields beyond identity")
+            if isinstance(ent, dict) and not ent.get("attributes"):
+                self.warn(f"Entity '{ent.get('id', '?')}' has no attributes beyond identity")
 
         # Value objects need equality
         for vo in agg.get("value_objects") or []:
             if isinstance(vo, dict):
-                if not vo.get("fields"):
-                    self.error(f"Value object '{vo.get('id', '?')}' must have at least one field")
+                if not vo.get("attributes"):
+                    self.error(f"Value object '{vo.get('id', '?')}' must have at least one attribute")
                 if not vo.get("equality"):
                     self.error(f"Value object '{vo.get('id', '?')}' missing required 'equality' field")
 

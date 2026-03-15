@@ -155,7 +155,7 @@ Other sources tell you **why** and **what it means** in domain terms.
 - ESML groups become candidate bounded contexts, but transcripts reveal
   whether two groups should merge (shared invariant) or one group should
   split (distinct responsibilities discussed separately).
-- ESML events become domain events, but transcripts reveal their payloads,
+- ESML events become domain events, but transcripts reveal their attributes,
   business significance, and which transitions they represent.
 - ESML actors hint at who initiates flows, but transcripts reveal the
   ubiquitous language names for roles and their responsibilities.
@@ -306,16 +306,16 @@ fabricate entities or value objects without evidence.
 
 **Intermediate depth** (process_modeling ESML, or conversations with moderate
 detail): Create aggregates based on identified aggregate candidates and
-command→event flows. Define domain events with basic payloads derived from
+command→event flows. Define domain events with basic attributes derived from
 source discussion. Create policies from identified reactive patterns.
 
 **Full tactical depth** (design_level ESML, or rich conversations with
-detailed discussion of state, fields, and invariants): Full tactical
+detailed discussion of state, attributes, and invariants): Full tactical
 modeling. For each aggregate:
 
-1. **Root entity.** Identity field, lifecycle states (derived from the event
-   flow — each pivotal event likely marks a state transition), and key fields
-   mentioned in transcripts.
+1. **Root entity.** Identity attribute, lifecycle states (derived from the
+   event flow — each pivotal event likely marks a state transition), and key
+   attributes mentioned in sources.
 
 2. **Child entities.** If sources mention "an order has lines" or "a
    pizza has toppings", those are child entities within the aggregate.
@@ -327,12 +327,12 @@ modeling. For each aggregate:
 4. **Domain events.** Map from ESML events (if available) or from events
    identified in Step 2b. Add:
    - `emitted_on`: what state transition triggers this event
-   - `payload`: fields derived from source discussion
+   - `attributes`: data carried by the event, derived from source discussion
    - `consumed_by`: known downstream consumers (bounded contexts or policies)
 
 5. **Commands.** Map from ESML commands (if available) or from commands
    identified in Step 2b. Add:
-   - `payload`: input fields
+   - `attributes`: input data for the command
    - `preconditions`: business rules from sources
    - `emits`: which events this command produces
 
@@ -362,7 +362,7 @@ modeling. For each aggregate:
 
 14. **Read models.** Map from ESML read models (if available) or from query
     needs identified in sources. Add `subscribes_to` events and output
-    `fields`.
+    `attributes`.
 
 15. **Modules.** Group related aggregates and services within a bounded
     context into cohesive modules.
@@ -386,7 +386,7 @@ This replaces the need for a separate "reviewer" skill.
   did I infer/generate it?" If inferred, mark `status: draft` and explain
   the inference in `notes`.
 - Pay special attention to:
-  - Entity fields that weren't discussed in any source
+  - Entity attributes that weren't discussed in any source
   - Value objects that are "common sense" but not evidenced
   - Policies that feel logical but weren't stated in any source
   - Process manager states that weren't discussed
@@ -467,24 +467,24 @@ The DMML you produce will feed into subsequent SDLC steps:
   service boundaries.
 - **Acceptance Testing** will derive test scenarios from domain events,
   commands, preconditions, and invariants.
-- **Data Modeling** will translate entities, value objects, and their fields
-  into database schemas. Clear field definitions matter.
+- **Data Modeling** will translate entities, value objects, and their
+  attributes into database schemas. Clear attribute definitions matter.
 - **Code Generation** will use aggregates, repositories, factories, and
   services as the blueprint for implementation classes.
 - **Deployment** will use bounded contexts and the context map to plan
   physical deployment units and service communication.
 
-This means: be precise with field types and constraints. A vague `type:
+This means: be precise with attribute types and constraints. A vague `type:
 string` is less useful than `type: string` with `constraints: ["ISO 4217"]`.
 The more precise the DMML, the less human intervention the downstream steps
-require. But don't fabricate precision — if the transcripts say "some kind
-of ID" without specifying the type, use `type: string` with a `notes` field
+require. But don't fabricate precision — if the sources say "some kind of
+ID" without specifying the type, use `type: string` with a `notes` entry
 saying "ID type not yet decided; UUID recommended."
 
 ## Common Pitfalls
 
 - **Don't model what wasn't discussed.** If the sources never mention
-  "Customer" as an entity with fields, don't create a fully-specified
+  "Customer" as an entity with attributes, don't create a fully-specified
   Customer entity. Create a minimal placeholder at `status: draft` if the
   aggregate needs it, and explain in `notes`.
 

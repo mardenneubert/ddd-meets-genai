@@ -279,7 +279,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
           id: ent-order
           name: "Order"
           identity:                   # REQUIRED — what makes this entity unique
-            field: orderId
+            attribute: orderId
             type: UUID
             generation: system        # OPTIONAL — system | user | external
           lifecycle:                  # OPTIONAL — states this entity passes through
@@ -290,7 +290,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
             - Ready
             - Delivered
             - Cancelled
-          fields:                     # OPTIONAL — attributes beyond identity
+          attributes:                     # OPTIONAL — attributes beyond identity
             - name: customerId
               type: UUID
               description: "Reference to the ordering customer"
@@ -313,11 +313,12 @@ An aggregate is a cluster of entities and value objects treated as a single unit
           - id: ent-order-line
             name: "Order Line"
             identity:
-              field: lineId
+              attribute: lineId
               type: UUID
-            fields:
+            attributes:
               - name: pizzaType
                 type: string
+                description: string
                 constraints: ["Margherita", "Pepperoni", "Hawaiian", "Custom"]
               - name: size
                 type: PizzaSize
@@ -336,20 +337,20 @@ An aggregate is a cluster of entities and value objects treated as a single unit
         value_objects:
           - id: vo-money
             name: "Money"
-            fields:
+            attributes:
               - name: amount
                 type: decimal
                 constraints: ["min=0"]
               - name: currency
                 type: string
                 constraints: ["ISO 4217"]
-            equality: all_fields      # REQUIRED — all_fields | subset
+            equality: all_attributes      # REQUIRED — all_attributes | subset
             notes: "Standard money pattern from Evans. Currency is always
                     USD for now but modeled for future multi-currency."
 
           - id: vo-delivery-address
             name: "Delivery Address"
-            fields:
+            attributes:
               - name: street
                 type: string
               - name: city
@@ -359,7 +360,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
               - name: coordinates
                 type: GeoPoint
                 nullable: true
-            equality: all_fields
+            equality: all_attributes
 
         # --- Invariants (aggregate-level business rules) ---
         invariants:
@@ -374,7 +375,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
             name: "Order Placed"
             description: "Emitted when a customer submits a complete order."
             emitted_on: "Transition from Draft to Submitted"
-            payload:
+            attributes:
               - { name: orderId, type: UUID }
               - { name: customerId, type: UUID }
               - { name: lines, type: OrderLineSummary[] }
@@ -391,7 +392,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
           - id: evt-order-paid
             name: "Order Paid"
             emitted_on: "Transition from Submitted to Paid"
-            payload:
+            attributes:
               - { name: orderId, type: UUID }
               - { name: paymentReference, type: string }
               - { name: paidAt, type: DateTime }
@@ -403,7 +404,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
           - id: cmd-place-order
             name: "Place Order"
             description: "Submit a complete order for processing."
-            payload:
+            attributes:
               - { name: customerId, type: UUID }
               - { name: lines, type: OrderLineInput[] }
               - { name: deliveryAddress, type: DeliveryAddress }
@@ -417,7 +418,7 @@ An aggregate is a cluster of entities and value objects treated as a single unit
 
           - id: cmd-cancel-order
             name: "Cancel Order"
-            payload:
+            attributes:
               - { name: orderId, type: UUID }
               - { name: reason, type: string }
             preconditions:
@@ -472,13 +473,13 @@ Both share the same schema:
           id: ent-xxx                 # REQUIRED — prefixed with ent-
           name: "string"              # REQUIRED
           identity:                   # REQUIRED
-            field: "string"           # The identity field name
+            attribute: "string"           # The identity attribute name
             type: "string"            # The identity type (UUID, int, string, etc.)
             generation: system        # OPTIONAL — system | user | external
           lifecycle:                  # OPTIONAL — state enumeration
             - "state1"
             - "state2"
-          fields:                     # OPTIONAL
+          attributes:                     # OPTIONAL
             - name: "string"
               type: "string"
               description: "string"   # OPTIONAL
@@ -495,16 +496,16 @@ Value objects are immutable objects defined by their attributes, with no concept
 ```yaml
           id: vo-xxx                  # REQUIRED — prefixed with vo-
           name: "string"              # REQUIRED
-          fields:                     # REQUIRED — at least one
+          attributes:                     # REQUIRED — at least one
             - name: "string"
               type: "string"
               constraints: [...]      # OPTIONAL
-          equality: all_fields        # REQUIRED — all_fields | subset
+          equality: all_attributes        # REQUIRED — all_attributes | subset
           status: draft
           notes: "string"
 ```
 
-**Evans' distinction:** Entities have identity and continuity; value objects have attributes and equality. When in doubt about whether something is an entity or value object, prefer value object — it's simpler, safer, and more composable. Value objects are always immutable by definition — this is not modeled as a field because it is inherent to the concept.
+**Evans' distinction:** Entities have identity and continuity; value objects have attributes and equality. When in doubt about whether something is an entity or value object, prefer value object — it's simpler, safer, and more composable. Value objects are always immutable by definition — this is not modeled as an attribute because it is inherent to the concept.
 
 ### 5.4 Domain Events (Summary)
 
@@ -516,7 +517,7 @@ Domain events represent something significant that happened in the domain. In DM
           description: "string"       # OPTIONAL
           emitted_on: "string"        # OPTIONAL — when this event fires
                                       #   (e.g., "Transition from X to Y")
-          payload:                    # OPTIONAL — data carried by the event
+          attributes:                    # OPTIONAL — data carried by the event
             - name: "string"
               type: "string"
           consumed_by: [...]          # OPTIONAL — known consumers
@@ -533,7 +534,7 @@ Commands represent an intent to change the domain state. They target an aggregat
           id: cmd-xxx                 # REQUIRED — prefixed with cmd-
           name: "string"              # REQUIRED — imperative form
           description: "string"       # OPTIONAL
-          payload:                    # OPTIONAL
+          attributes:                    # OPTIONAL
             - name: "string"
               type: "string"
           preconditions: [...]        # OPTIONAL — what must be true
@@ -676,7 +677,7 @@ Read models represent the query side of the domain — views optimized for readi
           - evt-order-paid
           - evt-kitchen-notified
           - evt-order-delivered
-        fields:
+        attributes:
           - { name: orderId, type: UUID }
           - { name: customerName, type: string }
           - { name: status, type: string }
@@ -799,7 +800,7 @@ A DMML document is valid if:
 - Bounded contexts without any aggregates (strategic-only model).
 - Aggregates without domain events.
 - Commands without preconditions.
-- Entities without fields beyond identity.
+- Entities without attributes beyond identity.
 - Domain services without operations.
 - Missing `notes` on `draft` elements (encouraged but not required).
 - Policies with `trigger_events` or `issues_commands` that reference elements in a different bounded context (may indicate a cross-context concern worth discussing).
@@ -828,10 +829,10 @@ bounded_contexts:
 
 ### Phase 2: Tactical Scaffolding
 
-Add aggregates with root entities (identity + lifecycle only), domain events (name + key payload fields), and commands. Mark refined elements as `proposed`. This phase typically follows a Design Level Event Storming session.
+Add aggregates with root entities (identity + lifecycle only), domain events (name + key attribute fields), and commands. Mark refined elements as `proposed`. This phase typically follows a Design Level Event Storming session.
 
 ```yaml
-# Phase 2 — aggregates appear, events get payloads
+# Phase 2 — aggregates appear, events get attributes
     aggregates:
       - id: agg-order
         name: "Order"
@@ -839,12 +840,12 @@ Add aggregates with root entities (identity + lifecycle only), domain events (na
         root_entity:
           id: ent-order
           name: "Order"
-          identity: { field: orderId, type: UUID }
+          identity: { attribute: orderId, type: UUID }
           lifecycle: [Draft, Submitted, Paid, Preparing, Ready, Delivered]
         domain_events:
           - id: evt-order-placed
             name: "Order Placed"
-            payload:
+            attributes:
               - { name: orderId, type: UUID }
               - { name: total, type: Money }
             status: proposed
@@ -852,7 +853,7 @@ Add aggregates with root entities (identity + lifecycle only), domain events (na
 
 ### Phase 3: Full Tactical Detail
 
-Add child entities, value objects, invariants, repositories, factories, specifications, services. Refine all fields and constraints. Move elements to `accepted` as the team agrees on them.
+Add child entities, value objects, invariants, repositories, factories, specifications, services. Refine all attributes and constraints. Move elements to `accepted` as the team agrees on them.
 
 ### Phase 4: Implementation Handoff
 
