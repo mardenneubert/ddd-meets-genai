@@ -1,0 +1,427 @@
+esml: "0.2.1"
+
+board:
+  title: "Cargo Shipping Domain Event Storming Board"
+  variation: design_level
+  notes: >
+    Reference ESML for the Cargo Shipping SVG board. This file represents
+    the expected correct transcription and is used as the gold standard
+    for evaluating LLM-generated ESML output.
+
+sources:
+  - id: src-001
+    file: "cargo-shipping-es-board.svg"
+    width_px: 3840
+    height_px: 1200
+
+groups:
+  - id: grp-booking-context
+    name: "Booking Context"
+    origin:
+      source: src-001
+      bbox: [50, 150, 1250, 1000]
+      color_observed: "#2E8B57"
+      text_confidence: 0.99
+  - id: grp-tracking-context
+    name: "Tracking Context"
+    origin:
+      source: src-001
+      bbox: [1350, 150, 1050, 1000]
+      color_observed: "#4169E1"
+      text_confidence: 0.99
+  - id: grp-voyage-context
+    name: "Voyage Context"
+    origin:
+      source: src-001
+      bbox: [2500, 150, 700, 500]
+      color_observed: "#9370DB"
+      text_confidence: 0.99
+  - id: grp-location-reference-data
+    name: "Location (Reference Data)"
+    origin:
+      source: src-001
+      bbox: [2500, 700, 700, 450]
+      color_observed: "#808080"
+      text_confidence: 0.99
+
+actors:
+  - id: act-shipping-clerk
+    name: "Shipping Clerk"
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [100, 200, 100, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.99
+  - id: act-port-operations
+    name: "Port Operations"
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [1400, 200, 100, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.99
+  - id: act-scheduling-dept
+    name: "Scheduling Dept"
+    group: grp-voyage-context
+    origin:
+      source: src-001
+      bbox: [2550, 200, 100, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.99
+
+events:
+  # Booking Context - top row (y=200)
+  - id: evt-cargo-booked
+    name: "Cargo Booked"
+    sequence: 1
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [400, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  # Booking Context - middle row (y=330)
+  - id: evt-cargo-routed
+    name: "Cargo Routed"
+    sequence: 2
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [550, 330, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  - id: evt-destination-changed
+    name: "Destination Changed"
+    sequence: 3
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [700, 330, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  # Booking Context - bottom row (y=500) — same x as top-row events
+  - id: evt-cargo-misdirected
+    name: "Cargo Misdirected"
+    sequence: 1
+    group: grp-booking-context
+    notes: "Placed in lower booking area near the policy. Same x-position as Cargo Booked."
+    origin:
+      source: src-001
+      bbox: [400, 500, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  - id: evt-cargo-delivered
+    name: "Cargo Delivered"
+    sequence: 2
+    group: grp-booking-context
+    notes: "Placed in lower booking area near the policy. Same x-position as Cargo Routed."
+    origin:
+      source: src-001
+      bbox: [550, 500, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  # Tracking Context - vertical stack (x=1700)
+  - id: evt-cargo-received
+    name: "Cargo Received"
+    sequence: 4
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [1700, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  - id: evt-cargo-loaded
+    name: "Cargo Loaded"
+    sequence: 4
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [1700, 330, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  - id: evt-cargo-unloaded
+    name: "Cargo Unloaded"
+    sequence: 4
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [1700, 500, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  - id: evt-customs-cleared
+    name: "Customs Cleared"
+    sequence: 4
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [1700, 670, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  # Tracking Context - right column (x=1850)
+  - id: evt-cargo-claimed
+    name: "Cargo Claimed"
+    sequence: 5
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [1850, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  # Voyage Context (x=2700)
+  - id: evt-voyage-scheduled
+    name: "Voyage Scheduled"
+    sequence: 6
+    group: grp-voyage-context
+    origin:
+      source: src-001
+      bbox: [2700, 330, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+  - id: evt-voyage-delayed
+    name: "Voyage Delayed"
+    sequence: 6
+    group: grp-voyage-context
+    origin:
+      source: src-001
+      bbox: [2700, 500, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.99
+
+commands:
+  - id: cmd-book-cargo
+    name: "Book Cargo"
+    sequence: 1
+    initiated_by:
+      actor: act-shipping-clerk
+    targets:
+      aggregate: agg-cargo
+    emits:
+      - evt-cargo-booked
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [250, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.99
+  - id: cmd-assign-itinerary
+    name: "Assign Itinerary"
+    sequence: 2
+    targets:
+      aggregate: agg-cargo
+    emits:
+      - evt-cargo-routed
+    group: grp-booking-context
+    notes: "No actor sticky is placed next to this command on the board."
+    origin:
+      source: src-001
+      bbox: [550, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.99
+  - id: cmd-change-destination
+    name: "Change Destination"
+    sequence: 3
+    targets:
+      aggregate: agg-cargo
+    emits:
+      - evt-destination-changed
+    group: grp-booking-context
+    notes: "No actor sticky is placed next to this command on the board."
+    origin:
+      source: src-001
+      bbox: [700, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.99
+  - id: cmd-register-handling-event
+    name: "Register Handling Event"
+    sequence: 4
+    initiated_by:
+      actor: act-port-operations
+    targets:
+      aggregate: agg-handling-event
+    emits:
+      - evt-cargo-received
+      - evt-cargo-loaded
+      - evt-cargo-unloaded
+    group: grp-tracking-context
+    notes: >
+      The SVG shows explicit downward arrows connecting Received, Loaded,
+      and Unloaded in a vertical chain from this command. Customs Cleared
+      at the same x-position but lower has no connecting arrow. Cargo
+      Claimed is at a different x-position (1850 vs 1700).
+    origin:
+      source: src-001
+      bbox: [1550, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.99
+  - id: cmd-schedule-voyage
+    name: "Schedule Voyage"
+    sequence: 6
+    initiated_by:
+      actor: act-scheduling-dept
+    targets:
+      aggregate: agg-voyage
+    emits:
+      - evt-voyage-scheduled
+    group: grp-voyage-context
+    origin:
+      source: src-001
+      bbox: [2700, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.99
+
+aggregates:
+  - id: agg-cargo
+    name: "Cargo"
+    receives:
+      - cmd-book-cargo
+      - cmd-assign-itinerary
+      - cmd-change-destination
+    produces:
+      - evt-cargo-booked
+      - evt-cargo-routed
+      - evt-destination-changed
+    group: grp-booking-context
+    notes: "A crossed-out correction note nearby on the board changes 'Shipment' to 'Cargo'."
+    origin:
+      source: src-001
+      bbox: [250, 330, 140, 110]
+      color_observed: "#FFD700"
+      text_confidence: 0.99
+  - id: agg-handling-event
+    name: "Handling Event"
+    receives:
+      - cmd-register-handling-event
+    produces:
+      - evt-cargo-received
+      - evt-cargo-loaded
+      - evt-cargo-unloaded
+      - evt-customs-cleared
+      - evt-cargo-claimed
+    group: grp-tracking-context
+    notes: >
+      Non-canonical layout: aggregate is to the right of the event stack,
+      not between command and events. All tracking events in this group
+      are produced by this aggregate.
+    origin:
+      source: src-001
+      bbox: [1850, 330, 140, 110]
+      color_observed: "#FFD700"
+      text_confidence: 0.99
+  - id: agg-voyage
+    name: "Voyage"
+    receives:
+      - cmd-schedule-voyage
+    produces:
+      - evt-voyage-scheduled
+      - evt-voyage-delayed
+    group: grp-voyage-context
+    origin:
+      source: src-001
+      bbox: [2850, 330, 140, 110]
+      color_observed: "#FFD700"
+      text_confidence: 0.99
+
+policies:
+  - id: pol-when-cargo-handled-derive-delivery
+    name: "When Cargo Handled Derive Delivery"
+    rule: "When Cargo Handled, derive Delivery"
+    group: grp-booking-context
+    notes: >
+      The policy sticky reads 'When Cargo Handled -> Derive Delivery'.
+      An arrow from the Tracking Context (1950,520) to (1100,520) carries
+      the label 'Cargo Handled', but this label is on the arrow connector,
+      not on a sticky note. No corresponding event sticky exists. The
+      triggering relationship is captured in unresolved-001. No follow-on
+      command sticky is shown next to this policy.
+    origin:
+      source: src-001
+      bbox: [850, 500, 140, 90]
+      color_observed: "#9370DB"
+      text_confidence: 0.98
+
+read_models:
+  - id: rm-cargo-tracking-view
+    name: "Cargo Tracking View"
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [1000, 200, 140, 90]
+      color_observed: "#3CB371"
+      text_confidence: 0.99
+
+external_systems:
+  - id: sys-routing-engine
+    name: "Routing Engine"
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [1000, 330, 140, 90]
+      color_observed: "#F0F0F0"
+      text_confidence: 0.99
+  - id: sys-unlocode-port-registry
+    name: "UN/LOCODE Port Registry"
+    group: grp-location-reference-data
+    origin:
+      source: src-001
+      bbox: [2550, 750, 140, 90]
+      color_observed: "#F0F0F0"
+      text_confidence: 0.99
+
+hotspots:
+  - id: hot-routing-engine-unavailable
+    name: "What if routing engine is unavailable?"
+    near:
+      - sys-routing-engine
+    group: grp-booking-context
+    origin:
+      source: src-001
+      bbox: [1000, 500, 140, 90]
+      color_observed: "#FF6B6B"
+      text_confidence: 0.99
+  - id: hot-partial-unloads
+    name: "How do we handle partial unloads?"
+    near:
+      - evt-cargo-unloaded
+    group: grp-tracking-context
+    origin:
+      source: src-001
+      bbox: [2050, 500, 140, 90]
+      color_observed: "#FF6B6B"
+      text_confidence: 0.99
+  - id: hot-location-external-service
+    name: "Should Location be external service?"
+    near:
+      - sys-unlocode-port-registry
+    group: grp-location-reference-data
+    origin:
+      source: src-001
+      bbox: [2700, 850, 140, 90]
+      color_observed: "#FF6B6B"
+      text_confidence: 0.99
+
+unresolved:
+  - id: unresolved-001
+    suspected_type: event
+    text_raw: "Cargo Handled"
+    notes: >
+      Arrow label on a connector from the Tracking Context (1950,520) to
+      the Booking Context policy area (1100,520). This text appears on the
+      arrow, not on a sticky note. It likely represents an abstract event
+      concept that triggers the delivery derivation policy, but no
+      corresponding event sticky exists on the board.
+    origin:
+      source: src-001
+      bbox: [1525, 500, 100, 30]
+      color_observed: "#666666"
+      text_confidence: 0.95
+
+confidence_defaults:
+  overall_text_extraction: 0.99
+  overall_classification: 0.96
+  notes: >
+    Source is a clean digital SVG, so text extraction confidence is very
+    high. Classification confidence is slightly lower where the board uses
+    non-canonical placement (Handling Event aggregate to the right of
+    events) or annotative elements (crossed-out correction note, arrow
+    label text).

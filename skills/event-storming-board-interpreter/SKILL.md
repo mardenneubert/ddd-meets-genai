@@ -141,7 +141,12 @@ Work through the board left-to-right, top-to-bottom:
 3. **Assign sequence numbers** to events and commands based on their
    horizontal position (left-to-right = earlier-to-later). Elements at
    the same horizontal position (vertically aligned) share a sequence
-   number.
+   number. **Sequence reflects physical x-position, not domain-logical
+   order.** If an event sticky sits at x=400 on the board, it gets the
+   same sequence as other stickies at x=400, regardless of when that
+   event occurs in the domain's business flow. An event placed early on
+   the board (leftward) but representing a late domain outcome still
+   gets an early sequence number.
 
 4. **Identify groups.** Look for drawn boundaries, labeled sections,
    tape dividers, or clear spatial gaps that cluster stickies together.
@@ -184,6 +189,18 @@ Work through the board left-to-right, top-to-bottom:
    aggregate, commands, and events coexisting in the same group are
    related. Don't leave an aggregate orphaned (empty `receives` and
    `produces`) when commands and events exist in its group.
+
+   **Distinguish stickies from arrow labels.** Text on a sticky note is
+   an element. Text on an arrow or connector is a *label* — it is NOT
+   an element. Only stickies become entries in `events`, `commands`,
+   etc. If an arrow label looks like an event name (e.g., "Cargo
+   Handled" written along a connector between two zones) but has no
+   corresponding sticky, do **not** create an event for it and do
+   **not** use it in `listens_to`, `triggers`, or `emits`. Instead,
+   capture it in the `unresolved` section with `suspected_type` set to
+   your best guess. Reference it in the `notes` field of any element
+   that connects to that arrow. This preserves the board information
+   without fabricating elements.
 
 6. **Capture annotations.** Hotspots (neon pink, often tilted),
    opportunities, values, and constraints. Link them to nearby elements
@@ -287,3 +304,16 @@ After saving the file, report a brief summary:
   Event left-to-right pattern. If an aggregate exists in a group, it is
   there because it participates in the command/event flow of that group.
   Connect it.
+
+- **Don't promote arrow labels to elements.** Text written along an
+  arrow or connector is a label, not a sticky. If it names something
+  that looks like an event but no orange sticky exists for it, capture
+  it in `unresolved` — don't create a phantom event or wire it into
+  `listens_to`/`triggers`. This is the second most common transcription
+  error.
+
+- **Don't assign sequence by domain logic.** Sequence numbers reflect
+  where stickies are physically placed on the board (x-position), not
+  when things happen in the business process. An event at x=400 gets
+  a lower sequence than one at x=1700, even if the domain says it
+  happens later.
