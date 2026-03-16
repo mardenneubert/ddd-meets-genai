@@ -1,0 +1,185 @@
+Bringots Credit Card Services — Event Storming Workshop
+========================================================
+Date: 2026-03-10
+Facilitator: Marden Neubert
+Participants: Joseph Yoder, Ana Souza (PO), Ricardo Lima (Domain Expert — Card Ops), Bruno Costa (Backend Lead)
+Duration: ~90 minutes (condensed)
+Type: Design Level Event Storming
+
+--- SESSION START ---
+
+Facilitator: All right, everyone. Today we're event-storming the new credit card services for Bringots. The scope is: issuing credit cards, purchase authorization, clearing and settlement, and monthly billing. Let's start by throwing events on the timeline — orange stickies, past tense, things that happen in the domain. Ricardo, since you know the card operations best, kick us off.
+
+Ricardo: OK. The very first thing that happens is a customer gets a credit card. So... "Credit Card Issued."
+
+[Places orange sticky: "Credit Card Issued"]
+
+Ana: Before we go further — can any customer get a card, or only existing account holders?
+
+Ricardo: Only existing Bringots bank account holders. That's a precondition.
+
+Facilitator: Good. Let's capture that in the model later. For now, keep going with events. What happens after the card is issued?
+
+Ricardo: The customer uses the card to make purchases. Each purchase goes through authorization. So we get "Purchase Authorized" when it goes through.
+
+[Places orange sticky: "Purchase Authorized"]
+
+Bruno: And when it doesn't go through?
+
+Ricardo: Right, "Purchase Declined." That's a separate event. Both outcomes matter because we record declined transactions too.
+
+[Places orange sticky: "Purchase Declined" below "Purchase Authorized"]
+
+Joseph: What triggers the decline? Is it always the credit limit, or are there other reasons?
+
+Ricardo: Multiple reasons. Credit limit exceeded is the main one, but also expired card, suspected fraud, card blocked by the customer. The fraud detection system is involved here — it's an external system we integrate with.
+
+Facilitator: Let's put the fraud detection system on the board. Pink sticky.
+
+[Places wide pink sticky: "Fraud Detection System"]
+
+Ana: When a purchase is declined because of suspected fraud, do we do anything special?
+
+Ricardo: Yes. Declined transactions that look fraudulent generate a notification to the fraud detection system. It's kind of a feedback loop — the fraud system helps us decline, and then we notify it back with details of what we declined so it can update its models.
+
+Facilitator: That sounds like a policy. "When Purchase Declined, notify the fraud system." Let me put a lilac sticky for that.
+
+[Places lilac sticky: "When Declined → Notify Fraud"]
+
+Joseph: Not every decline triggers the notification though, right? Only suspected fraud ones?
+
+Ricardo: Correct. The policy has a condition — only when the decline reason involves fraud indicators. But for now, let's keep it simple on the board.
+
+Facilitator: We should add a hotspot for the fraud rules — there's clearly more to discuss there.
+
+[Places neon pink hotspot: "Which fraud rules apply?"]
+
+Facilitator: OK, moving to the right on the timeline. What happens after purchase authorization?
+
+Ricardo: At the end of each day, we process all the authorized transactions. This is the clearing and settlement process. Each transaction is settled — meaning the hold is converted to an actual charge. And then the merchant gets paid.
+
+[Places orange sticky: "Transaction Settled"]
+[Places orange sticky: "Merchant Paid"]
+
+Bruno: So settlement is a batch process, not real-time?
+
+Ricardo: Exactly. End of day. It's triggered by a time-based policy, not by a specific event. We accumulate authorized transactions during the day and settle them all at once.
+
+Facilitator: I'll put a policy sticky for that: "End of Day → Settle."
+
+[Places lilac sticky: "End of Day → Settle"]
+
+Joseph: And the merchant payment — does that go through an external system?
+
+Ricardo: Yes. We don't pay merchants directly. We go through a payment network — like Visa or Mastercard's settlement network.
+
+[Places wide pink sticky: "Payment Network"]
+
+Facilitator: Good. Now the last major flow — billing and payment.
+
+Ana: Monthly, we generate statements for each credit card showing all the transactions, the balance, minimum payment, due date. So "Statement Generated" is an event.
+
+[Places orange sticky: "Statement Generated"]
+
+Ricardo: And then the customer pays. "Payment Received" when they pay the statement.
+
+[Places orange sticky: "Payment Received"]
+
+Ana: There are two ways to pay. One is manually through BringotsWeb — the internet banking app. The other is AutoPay, where the customer sets it up once and we automatically debit their bank account each month.
+
+Facilitator: AutoPay sounds like another policy. "When Statement Generated, if AutoPay is enrolled, trigger payment."
+
+[Places lilac sticky: "Statement Gen. → AutoPay"]
+
+Bruno: The AutoPay needs to interact with the bank account system, right? That's the existing Bringots system.
+
+[Places wide pink sticky: "Bank Account System (BringotsWeb)"]
+
+Ricardo: Right. AutoPay debits from the customer's Bringots bank account. Manual payment also goes through BringotsWeb.
+
+Facilitator: Let me add a read model here. When the card holder goes to pay manually, they need to see their transactions and the statement balance. So there's a "Card Transactions" view.
+
+[Places green sticky: "Card Transactions"]
+
+Facilitator: OK, now let's add commands. What actions trigger these events? Blue stickies. Starting from the left.
+
+Ricardo: "Issue Credit Card" — that's how we get to Credit Card Issued.
+
+[Places blue sticky: "Issue Credit Card"]
+
+Ana: And who initiates that? The customer requests it, but approval involves a credit check.
+
+Facilitator: The actor is the Card Holder. Let me put a small yellow sticky.
+
+[Places small yellow actor sticky: "Card Holder"]
+
+Ricardo: For purchases, the command is "Authorize Purchase." The merchant initiates it via the payment network.
+
+[Places blue sticky: "Authorize Purchase"]
+[Places small yellow actor sticky: "Merchant"]
+
+Joseph: Should we add the credit card itself as an aggregate? It's the core entity that holds the credit limit and card details.
+
+Facilitator: Absolutely. Let's add aggregates now. Large yellow stickies.
+
+[Places large yellow aggregate sticky: "Credit Card"]
+
+Bruno: In the purchase area, the aggregate is what? The transaction? The authorization?
+
+Ricardo: It's the "Purchase Authorization." Each authorization request is its own thing — it has an amount, a merchant, a status (pending, approved, declined), a timestamp. It goes through a lifecycle.
+
+Bruno: I was going to call it "Transaction" but that's too generic, right?
+
+Ricardo: Yeah, "Purchase Authorization" is more precise. Transaction could mean anything — a payment, a refund, a fee.
+
+[Bruno crosses out a "Transaction" sticky he'd started writing, team agrees on "Purchase Authorization"]
+
+[Places large yellow aggregate sticky: "Purchase Authorization"]
+
+Facilitator: And for billing?
+
+Ana: The aggregate is "Monthly Statement." It accumulates the transactions for the billing period, calculates the balance, minimum payment, and due date.
+
+[Places large yellow aggregate sticky: "Monthly Statement"]
+
+Facilitator: What about settlement? Does it have its own aggregate?
+
+Ricardo: Not really. Settlement operates on the Purchase Authorizations — it changes their status from authorized to settled. It doesn't need its own separate aggregate. The settlement process is more of a batch command that affects multiple existing authorizations.
+
+Facilitator: Good point. The settle command targets the Purchase Authorization aggregate conceptually, but it's a batch operation. Let's add the remaining commands.
+
+[Places blue sticky: "Settle Transactions"]
+[Places blue sticky: "Generate Statement"]
+[Places blue sticky: "Pay Statement"]
+
+Facilitator: One more thing. What determines the initial credit limit when we issue a card? That seems like an important business rule we haven't nailed down.
+
+Ana: It depends on the customer's account history, income, credit score... We haven't defined the exact rules yet.
+
+[Places neon pink hotspot: "What determines credit limit?"]
+
+Facilitator: Let me now draw the groups. I see four natural clusters on the board: Card Issuance on the left, Purchase Authorization in the middle, Clearing & Settlement next, and Billing & Payment on the right.
+
+[Draws dashed boundaries around the four groups]
+
+Joseph: The flow between Purchase Authorization and Settlement is interesting. The authorized transactions accumulate during the day and then get settled in a batch. That's the "Daily Batch" flow.
+
+Facilitator: Right, let me draw an arrow from Purchase Authorized to the End of Day settlement policy and label it. That's how they connect across the zones.
+
+[Draws arrow from Purchase Authorized to End of Day policy with "Daily Batch" written on the arrow]
+
+Facilitator: Also, notice that Card Holder appears in two places — in Card Issuance and in Billing. That's the same actor in different contexts. Let me put another small yellow sticky for Card Holder in the billing group.
+
+[Places second small yellow actor sticky: "Card Holder" in the Billing & Payment group]
+
+Ana: This looks good for a first pass. We have the four main flows covered. The hotspots remind us to come back to credit limit determination and fraud rules.
+
+Facilitator: Agreed. Let's summarize what we have. We've identified 7 domain events, 5 commands, 3 aggregates, 3 policies, 3 external systems, 1 read model, 2 actors, and 2 hotspots. The board covers the full credit card lifecycle from issuance through purchase, settlement, and billing. The main integration points are between Purchase Authorization and Settlement via the daily batch, and between Statement Generation and Payment via the AutoPay policy.
+
+--- SESSION END ---
+
+Notes:
+- The "Daily Batch" text on the arrow between Purchase Authorized and the Settlement policy is an arrow label, not a sticky note.
+- The crossed-out "Transaction" sticky near the Purchase Authorization aggregate shows the team's refinement of the aggregate name.
+- The Generate Statement command has no explicit actor or policy trigger on the board; the team discussed it being a monthly batch process but didn't add a separate policy for it.
+- The Settle Transactions command is triggered by the End of Day policy, which is time-based (no event trigger on the board).

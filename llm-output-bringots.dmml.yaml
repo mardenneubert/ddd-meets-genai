@@ -1,0 +1,587 @@
+dmml: "0.1.0"
+
+model:
+  name: "Bringots Credit Card Services"
+  description: "DDD domain model for Bringots credit card issuance, authorization, settlement, billing, and payment."
+  status: proposed
+  date: "2026-03-17"
+  authors:
+    - "Codex"
+  esml_source: "bringots-es-board.esml.yaml"
+  notes: |
+    Gold-path model derived from the Bringots ESML plus the workshop transcript.
+    The strongest structural interpretation is that the ESML groups
+    "Purchase Authorization" and "Clearing & Settlement" belong to a single
+    bounded context, because the transcript says settlement operates on the
+    Purchase Authorization aggregate rather than introducing a separate one.
+    Remaining open questions are the credit-limit determination rules and the
+    exact fraud-decline rules.
+
+subdomains:
+  - id: sd-card-issuance
+    name: "Card Issuance"
+    classification: supporting
+    description: "Issues credit cards to eligible Bringots account holders and establishes initial card limits."
+    business_value: "Necessary onboarding capability for the card business, but not the area with the richest domain complexity on this board."
+    status: proposed
+    notes: "Scope is explicit in the transcript opening and the group label. Classification is an inference based on the workshop's tactical depth concentrating elsewhere."
+  - id: sd-purchase-processing
+    name: "Purchase Processing"
+    classification: core
+    description: "Authorizes purchases, records declines, and performs end-of-day settlement and merchant payment."
+    business_value: "This is the real-time and operational heart of the card service, including authorization outcomes, fraud-related declines, and settlement."
+    status: proposed
+    notes: "Classification is an evidence-based inference from the board's density and the transcript's focus on authorization, decline reasons, fraud, and settlement."
+  - id: sd-billing-payment
+    name: "Billing & Payment"
+    classification: supporting
+    description: "Generates monthly statements and collects payment manually or through AutoPay."
+    business_value: "Core to running a card program, but modeled here with less behavioral depth than purchase processing."
+    status: proposed
+  - id: sd-external-platforms
+    name: "External Platforms"
+    classification: generic
+    description: "External systems and established infrastructure integrated by the Bringots card domain."
+    business_value: "Generic integrations rather than bespoke domain capabilities."
+    status: draft
+    notes: "Created to host external bounded contexts used in the context map."
+
+bounded_contexts:
+  - id: bc-card-issuance
+    name: "Card Issuance"
+    subdomain: sd-card-issuance
+    description: "Issues new credit cards and establishes the initial card state."
+    responsibilities:
+      - "Issue credit cards"
+      - "Enforce account-holder eligibility"
+      - "Assign initial credit limits"
+    status: proposed
+    ubiquitous_language:
+      - id: term-credit-card
+        term: "Credit Card"
+        definition: "The card product issued to a Bringots customer, carrying card details and a credit limit."
+      - id: term-credit-limit
+        term: "Credit Limit"
+        definition: "The spending ceiling assigned when a card is issued."
+    aggregates:
+      - id: agg-credit-card
+        name: "Credit Card"
+        description: "Aggregate root for an issued credit card and its initial credit configuration."
+        status: proposed
+        root_entity:
+          id: ent-credit-card
+          name: "Credit Card"
+          identity:
+            attribute: creditCardId
+            type: CreditCardId
+            generation: system
+          lifecycle:
+            - PendingIssue
+            - Issued
+            - Blocked
+            - Expired
+          attributes:
+            - name: accountHolderId
+              type: AccountHolderId
+              description: "Existing Bringots account holder receiving the card."
+            - name: creditLimit
+              type: Money
+              description: "Initial approved spending limit for the card."
+            - name: issuedAt
+              type: DateTime
+              description: "When the card was issued."
+            - name: status
+              type: CreditCardStatus
+              description: "Current card status."
+          status: proposed
+          notes: "The transcript states the aggregate holds the credit limit and card details."
+        invariants:
+          - "Only existing Bringots bank account holders can receive a credit card"
+          - "A credit card must have an initial credit limit when issued"
+        domain_events:
+          - id: evt-credit-card-issued
+            name: "Credit Card Issued"
+            description: "Emitted when a new credit card has been successfully issued."
+            emitted_on: "Successful completion of Issue Credit Card"
+            attributes:
+              - { name: creditCardId, type: CreditCardId }
+              - { name: accountHolderId, type: AccountHolderId }
+              - { name: creditLimit, type: Money }
+              - { name: issuedAt, type: DateTime }
+            consumed_by:
+              - bc-purchase-processing
+            status: proposed
+        commands:
+          - id: cmd-issue-credit-card
+            name: "Issue Credit Card"
+            description: "Issue a new card to an eligible Bringots account holder."
+            attributes:
+              - { name: accountHolderId, type: AccountHolderId }
+            preconditions:
+              - "The customer is an existing Bringots bank account holder"
+            emits:
+              - evt-credit-card-issued
+            status: proposed
+        specifications:
+          - id: spec-existing-account-holder
+            name: "Existing Account Holder"
+            description: "Only existing Bringots bank account holders are eligible for card issuance."
+            predicate: "accountHolder.existsInBringots == true"
+            status: proposed
+        repository:
+          id: repo-credit-card
+          name: "CreditCardRepository"
+          operations:
+            - "save"
+            - "findById"
+            - "findByAccountHolderId"
+          status: draft
+    domain_services:
+      - id: svc-credit-limit-assessment
+        name: "Credit Limit Assessment"
+        description: "Determines the initial credit limit from account history, income, credit score, and other factors."
+        operations:
+          - name: determineInitialLimit
+            params:
+              - { name: accountHolderId, type: AccountHolderId }
+            returns: Money
+        status: draft
+        notes: "Directly reflects the hotspot 'What determines credit limit?' and transcript discussion that the rule is not yet defined."
+    application_services:
+      - id: app-issue-credit-card
+        name: "Issue Credit Card Service"
+        description: "Checks eligibility, determines the initial limit, creates the card aggregate, persists it, and publishes Credit Card Issued."
+        use_case: "Card holder requests a new credit card"
+        coordinates:
+          - repo-credit-card
+          - svc-credit-limit-assessment
+        handles:
+          - cmd-issue-credit-card
+        status: draft
+        notes: "Application flow is inferred from the issuance command plus the unresolved credit-limit logic."
+
+  - id: bc-purchase-processing
+    name: "Purchase Processing"
+    subdomain: sd-purchase-processing
+    description: "Handles purchase authorization, fraud-related decline feedback, batch settlement, and merchant payment."
+    responsibilities:
+      - "Authorize purchases"
+      - "Record purchase declines and decline reasons"
+      - "Notify fraud systems for fraud-indicated declines"
+      - "Settle authorized transactions in daily batches"
+      - "Pay merchants through the payment network"
+    status: proposed
+    notes: "This context merges the ESML groups Purchase Authorization and Clearing & Settlement because settlement mutates Purchase Authorization rather than introducing a separate aggregate."
+    ubiquitous_language:
+      - id: term-purchase-authorization
+        term: "Purchase Authorization"
+        definition: "A purchase authorization request with amount, merchant, status, and timestamp."
+      - id: term-decline-reason
+        term: "Decline Reason"
+        definition: "The reason an authorization request was declined, such as credit limit exceeded or suspected fraud."
+      - id: term-daily-batch
+        term: "Daily Batch"
+        definition: "The end-of-day batch flow that settles accumulated authorized transactions."
+    aggregates:
+      - id: agg-purchase-authorization
+        name: "Purchase Authorization"
+        description: "Aggregate root for purchase authorization lifecycle from request through settlement."
+        status: proposed
+        notes: "The transcript explicitly refines the aggregate name from 'Transaction' to 'Purchase Authorization'."
+        root_entity:
+          id: ent-purchase-authorization
+          name: "Purchase Authorization"
+          identity:
+            attribute: authorizationId
+            type: PurchaseAuthorizationId
+            generation: system
+          lifecycle:
+            - Pending
+            - Authorized
+            - Declined
+            - Settled
+          attributes:
+            - name: creditCardId
+              type: CreditCardId
+            - name: amount
+              type: Money
+            - name: merchantId
+              type: MerchantId
+            - name: requestedAt
+              type: DateTime
+            - name: status
+              type: AuthorizationStatus
+            - name: declineReason
+              type: DeclineReason
+              nullable: true
+            - name: settledAt
+              type: DateTime
+              nullable: true
+          status: proposed
+          notes: "Field set comes from Ricardo's description of Purchase Authorization."
+        invariants:
+          - "A purchase authorization has exactly one authorization outcome: authorized or declined"
+          - "Only authorized purchase authorizations can be settled"
+          - "Merchant payment occurs only after settlement"
+        domain_events:
+          - id: evt-purchase-authorized
+            name: "Purchase Authorized"
+            description: "Emitted when a purchase request is approved."
+            emitted_on: "Authorization outcome becomes Authorized"
+            attributes:
+              - { name: authorizationId, type: PurchaseAuthorizationId }
+              - { name: creditCardId, type: CreditCardId }
+              - { name: amount, type: Money }
+              - { name: merchantId, type: MerchantId }
+              - { name: requestedAt, type: DateTime }
+            consumed_by:
+              - app-settle-transactions-batch
+              - bc-billing-payment
+            status: proposed
+          - id: evt-purchase-declined
+            name: "Purchase Declined"
+            description: "Emitted when a purchase request is rejected."
+            emitted_on: "Authorization outcome becomes Declined"
+            attributes:
+              - { name: authorizationId, type: PurchaseAuthorizationId }
+              - { name: creditCardId, type: CreditCardId }
+              - { name: declineReason, type: DeclineReason }
+            consumed_by:
+              - pol-notify-fraud-on-decline
+            status: proposed
+          - id: evt-transaction-settled
+            name: "Transaction Settled"
+            description: "Emitted when an authorized purchase becomes a settled charge."
+            emitted_on: "End-of-day settlement marks authorization as Settled"
+            attributes:
+              - { name: authorizationId, type: PurchaseAuthorizationId }
+              - { name: settledAt, type: DateTime }
+            consumed_by:
+              - bc-billing-payment
+            status: proposed
+          - id: evt-merchant-paid
+            name: "Merchant Paid"
+            description: "Emitted when the merchant payment is initiated through the payment network."
+            emitted_on: "Settlement completes merchant payout step"
+            attributes:
+              - { name: authorizationId, type: PurchaseAuthorizationId }
+              - { name: merchantId, type: MerchantId }
+            status: proposed
+        commands:
+          - id: cmd-authorize-purchase
+            name: "Authorize Purchase"
+            description: "Evaluate a purchase request and approve or decline it."
+            attributes:
+              - { name: creditCardId, type: CreditCardId }
+              - { name: amount, type: Money }
+              - { name: merchantId, type: MerchantId }
+            preconditions:
+              - "The credit card exists and is usable"
+            emits:
+              - evt-purchase-authorized
+              - evt-purchase-declined
+            status: proposed
+          - id: cmd-notify-fraud-system
+            name: "Notify Fraud System"
+            description: "Send details of a fraud-indicated declined authorization to the fraud detection system."
+            attributes:
+              - { name: authorizationId, type: PurchaseAuthorizationId }
+              - { name: declineReason, type: DeclineReason }
+            preconditions:
+              - "The decline reason includes fraud indicators"
+            status: proposed
+            notes: "Introduced to represent the policy's action without inventing a new event."
+          - id: cmd-settle-transactions
+            name: "Settle Transactions"
+            description: "Run the daily batch that settles accumulated authorized purchases and pays merchants."
+            attributes:
+              - name: authorizationIds
+                type: "PurchaseAuthorizationId[]"
+            preconditions:
+              - "Each targeted authorization is in Authorized status"
+            emits:
+              - evt-transaction-settled
+              - evt-merchant-paid
+            status: proposed
+        repository:
+          id: repo-purchase-authorization
+          name: "PurchaseAuthorizationRepository"
+          operations:
+            - "save"
+            - "findById"
+            - "findAuthorizedForSettlement"
+          status: draft
+    application_services:
+      - id: app-authorize-purchase
+        name: "Authorize Purchase Service"
+        description: "Orchestrates purchase authorization and persistence of the resulting authorization state."
+        use_case: "Merchant requests purchase authorization"
+        coordinates:
+          - repo-purchase-authorization
+        handles:
+          - cmd-authorize-purchase
+        status: draft
+      - id: app-settle-transactions-batch
+        name: "Settle Transactions Batch"
+        description: "Time-based batch process that settles authorized purchases at end of day."
+        use_case: "End-of-day clearing and settlement"
+        coordinates:
+          - repo-purchase-authorization
+        handles:
+          - cmd-settle-transactions
+        status: proposed
+        notes: "The transcript explicitly says settlement is triggered by a time-based policy rather than an event."
+    policies:
+      - id: pol-notify-fraud-on-decline
+        name: "Notify Fraud on Decline"
+        description: "Whenever a declined purchase contains fraud indicators, notify the fraud detection system."
+        trigger_events:
+          - evt-purchase-declined
+        issues_commands:
+          - cmd-notify-fraud-system
+        rule: "When Purchase Declined with fraud indicators, notify fraud"
+        status: proposed
+        notes: "The board simplifies this to all declines; the transcript clarifies the condition."
+
+  - id: bc-billing-payment
+    name: "Billing & Payment"
+    subdomain: sd-billing-payment
+    description: "Generates monthly statements, presents card transactions for payment, and records payments."
+    responsibilities:
+      - "Generate monthly statements"
+      - "Show card transactions and statement balance for manual payment"
+      - "Accept manual statement payments"
+      - "Trigger AutoPay for enrolled customers"
+    status: proposed
+    ubiquitous_language:
+      - id: term-monthly-statement
+        term: "Monthly Statement"
+        definition: "A billing-period statement containing transactions, balance, minimum payment, and due date."
+      - id: term-autopay
+        term: "AutoPay"
+        definition: "Automatic monthly debit from the customer's Bringots bank account after statement generation."
+      - id: term-card-transactions-view
+        term: "Card Transactions"
+        definition: "The read model used by the card holder to see transactions and statement balance before paying."
+    aggregates:
+      - id: agg-monthly-statement
+        name: "Monthly Statement"
+        description: "Aggregate root for a card's billing-period statement and payment state."
+        status: proposed
+        root_entity:
+          id: ent-monthly-statement
+          name: "Monthly Statement"
+          identity:
+            attribute: statementId
+            type: StatementId
+            generation: system
+          lifecycle:
+            - Draft
+            - Generated
+            - Paid
+          attributes:
+            - name: creditCardId
+              type: CreditCardId
+            - name: billingPeriod
+              type: BillingPeriod
+            - name: balance
+              type: Money
+            - name: minimumPayment
+              type: Money
+            - name: dueDate
+              type: Date
+            - name: paymentReceivedAt
+              type: DateTime
+              nullable: true
+          status: proposed
+          notes: "The transcript explicitly lists the statement contents: transactions, balance, minimum payment, and due date."
+        value_objects:
+          - id: vo-billing-period
+            name: "BillingPeriod"
+            attributes:
+              - { name: startDate, type: Date }
+              - { name: endDate, type: Date }
+            equality: all_attributes
+            status: proposed
+        invariants:
+          - "A generated statement has a balance, minimum payment, and due date"
+          - "Payment Received can only occur after Statement Generated"
+        domain_events:
+          - id: evt-statement-generated
+            name: "Statement Generated"
+            description: "Emitted when a monthly statement is generated for a card."
+            emitted_on: "Successful completion of Generate Statement"
+            attributes:
+              - { name: statementId, type: StatementId }
+              - { name: creditCardId, type: CreditCardId }
+              - { name: balance, type: Money }
+              - { name: minimumPayment, type: Money }
+              - { name: dueDate, type: Date }
+            consumed_by:
+              - pol-statement-generated-autopay
+              - rm-card-transactions
+            status: proposed
+          - id: evt-payment-received
+            name: "Payment Received"
+            description: "Emitted when payment for a statement is received."
+            emitted_on: "Successful completion of Pay Statement"
+            attributes:
+              - { name: statementId, type: StatementId }
+              - { name: receivedAt, type: DateTime }
+            consumed_by:
+              - rm-card-transactions
+            status: proposed
+        commands:
+          - id: cmd-generate-statement
+            name: "Generate Statement"
+            description: "Generate a monthly statement from transactions in the billing period."
+            attributes:
+              - { name: creditCardId, type: CreditCardId }
+              - { name: billingPeriod, type: BillingPeriod }
+            preconditions:
+              - "Transactions exist for the billing period"
+            emits:
+              - evt-statement-generated
+            status: proposed
+            notes: "The transcript notes that no explicit actor or policy trigger appears on the board."
+          - id: cmd-pay-statement
+            name: "Pay Statement"
+            description: "Record manual or automatic payment for a generated statement."
+            attributes:
+              - { name: statementId, type: StatementId }
+              - { name: paymentMethod, type: PaymentMethod }
+            preconditions:
+              - "Statement is generated"
+            emits:
+              - evt-payment-received
+            status: proposed
+        repository:
+          id: repo-monthly-statement
+          name: "MonthlyStatementRepository"
+          operations:
+            - "save"
+            - "findById"
+            - "findOpenStatementsByCreditCard"
+          status: draft
+    application_services:
+      - id: app-generate-statement
+        name: "Generate Statement Service"
+        description: "Builds and persists monthly statements for the billing period."
+        use_case: "Monthly billing run"
+        coordinates:
+          - repo-monthly-statement
+        handles:
+          - cmd-generate-statement
+        status: draft
+      - id: app-pay-statement
+        name: "Pay Statement Service"
+        description: "Records payment and persists the paid statement state."
+        use_case: "Card holder or AutoPay pays a statement"
+        coordinates:
+          - repo-monthly-statement
+        handles:
+          - cmd-pay-statement
+        status: draft
+    policies:
+      - id: pol-statement-generated-autopay
+        name: "Statement Generated AutoPay"
+        description: "Whenever a statement is generated for an AutoPay-enrolled customer, trigger statement payment."
+        trigger_events:
+          - evt-statement-generated
+        issues_commands:
+          - cmd-pay-statement
+        rule: "When Statement Generated and AutoPay is enrolled, pay statement"
+        status: proposed
+    read_models:
+      - id: rm-card-transactions
+        name: "Card Transactions"
+        description: "Read model for manual payment showing transactions and current statement balance."
+        subscribes_to:
+          - evt-transaction-settled
+          - evt-statement-generated
+          - evt-payment-received
+        attributes:
+          - { name: creditCardId, type: CreditCardId }
+          - { name: transactions, type: "SettledTransactionSummary[]" }
+          - { name: statementBalance, type: Money }
+          - { name: minimumPayment, type: Money }
+          - { name: dueDate, type: Date }
+        consumers:
+          - "Card Holder via BringotsWeb"
+        status: proposed
+        notes: "The transcript explicitly says the card holder needs to see transactions and statement balance before paying manually."
+
+  - id: bc-fraud-detection-system
+    name: "Fraud Detection System"
+    subdomain: sd-external-platforms
+    description: "External fraud system consulted during declines and notified about suspicious declined transactions."
+    responsibilities:
+      - "Provide fraud signals used during decline decisions"
+      - "Receive feedback on suspicious declines"
+    status: draft
+
+  - id: bc-payment-network
+    name: "Payment Network"
+    subdomain: sd-external-platforms
+    description: "External payment network used for merchant settlement."
+    responsibilities:
+      - "Process merchant settlement payouts"
+    status: draft
+
+  - id: bc-bank-account-system
+    name: "Bank Account System (BringotsWeb)"
+    subdomain: sd-external-platforms
+    description: "Existing Bringots banking platform used for manual payment and AutoPay debits."
+    responsibilities:
+      - "Hold the customer's Bringots bank account"
+      - "Execute statement payments"
+    status: draft
+
+context_map:
+  description: "Inter-context relationships for Bringots credit card services"
+  status: proposed
+  notes: "Built from the ESML structure and transcript clarifications. External-platform relationships remain draft where integration style is visible but the exact contract is not."
+  relationships:
+    - id: rel-card-issuance-purchase-processing
+      name: "Card Issuance -> Purchase Processing"
+      type: customer_supplier
+      upstream: bc-card-issuance
+      downstream: bc-purchase-processing
+      description: "Purchase processing depends on issued cards and their limits."
+      integration_style: events
+      status: draft
+      notes: "Inferred from the domain flow: authorization presupposes card issuance."
+    - id: rel-purchase-processing-billing
+      name: "Purchase Processing -> Billing & Payment"
+      type: customer_supplier
+      upstream: bc-purchase-processing
+      downstream: bc-billing-payment
+      description: "Billing builds statements from the purchase-processing transaction stream."
+      integration_style: events
+      status: proposed
+      notes: "Transactions shown on statements come from settled card activity."
+    - id: rel-purchase-processing-fraud
+      name: "Purchase Processing -> Fraud Detection System"
+      type: customer_supplier
+      upstream: bc-purchase-processing
+      downstream: bc-fraud-detection-system
+      description: "Purchase processing sends suspicious declines back to the fraud system."
+      integration_style: api
+      status: draft
+      notes: "The transcript describes a feedback loop, so this may evolve into a partnership if both sides co-evolve."
+    - id: rel-payment-network-purchase-processing
+      name: "Payment Network -> Purchase Processing"
+      type: conformist
+      upstream: bc-payment-network
+      downstream: bc-purchase-processing
+      description: "Merchant payout runs through the external payment network."
+      integration_style: messaging
+      status: draft
+    - id: rel-bank-account-billing
+      name: "Bank Account System -> Billing & Payment"
+      type: conformist
+      upstream: bc-bank-account-system
+      downstream: bc-billing-payment
+      description: "Manual payments and AutoPay both execute through BringotsWeb and the bank account system."
+      integration_style: api
+      status: proposed

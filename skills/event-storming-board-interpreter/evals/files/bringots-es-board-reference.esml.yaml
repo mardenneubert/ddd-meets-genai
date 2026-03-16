@@ -1,0 +1,508 @@
+esml: "0.2.1"
+
+board:
+  title: "Bringots Credit Card Services — Design Level Event Storming"
+  variation: design_level
+  date: "2026-03-10"
+  facilitator: "Marden Neubert"
+  participants:
+    - "Joseph Yoder"
+    - "Ana Souza"
+    - "Ricardo Lima"
+    - "Bruno Costa"
+  notes: >
+    Event Storming session covering the new credit card services for
+    Bringots: card issuance, purchase authorization, clearing and
+    settlement, and monthly billing with AutoPay. Synthetic domain
+    based on a group exercise by Joseph Yoder.
+
+sources:
+  - id: src-001
+    file: "bringots-es-board.svg"
+    width_px: 3840
+    height_px: 1200
+
+# =============================================================================
+# GROUPS
+# =============================================================================
+
+groups:
+  - id: grp-card-issuance
+    name: "Card Issuance"
+    origin:
+      source: src-001
+      bbox: [50, 100, 760, 530]
+      color_observed: "#2E8B57"
+      text_confidence: 0.95
+
+  - id: grp-purchase-auth
+    name: "Purchase Authorization"
+    origin:
+      source: src-001
+      bbox: [860, 100, 830, 660]
+      color_observed: "#4169E1"
+      text_confidence: 0.95
+
+  - id: grp-settlement
+    name: "Clearing & Settlement"
+    origin:
+      source: src-001
+      bbox: [1740, 100, 650, 490]
+      color_observed: "#9370DB"
+      text_confidence: 0.93
+
+  - id: grp-billing
+    name: "Billing & Payment"
+    origin:
+      source: src-001
+      bbox: [2440, 100, 1350, 660]
+      color_observed: "#808080"
+      text_confidence: 0.94
+
+# =============================================================================
+# ACTORS
+# =============================================================================
+
+actors:
+  - id: act-card-holder
+    name: "Card Holder"
+    group: grp-card-issuance
+    notes: >
+      Same actor appears again in grp-billing (second small yellow
+      sticky at x=2920). Represents an existing Bringots bank account
+      customer.
+    origin:
+      source: src-001
+      bbox: [100, 200, 100, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.95
+
+  - id: act-merchant
+    name: "Merchant"
+    group: grp-purchase-auth
+    origin:
+      source: src-001
+      bbox: [910, 200, 100, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.94
+
+  - id: act-card-holder-billing
+    name: "Card Holder"
+    group: grp-billing
+    notes: >
+      Duplicate sticky of the same actor (act-card-holder) placed in
+      the Billing & Payment zone to show the card holder's role in
+      paying statements.
+    origin:
+      source: src-001
+      bbox: [2920, 350, 100, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.95
+
+# =============================================================================
+# EVENTS
+# =============================================================================
+
+events:
+  - id: evt-credit-card-issued
+    name: "Credit Card Issued"
+    sequence: 1
+    group: grp-card-issuance
+    origin:
+      source: src-001
+      bbox: [470, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.95
+
+  - id: evt-purchase-authorized
+    name: "Purchase Authorized"
+    sequence: 2
+    group: grp-purchase-auth
+    origin:
+      source: src-001
+      bbox: [1310, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.94
+
+  - id: evt-purchase-declined
+    name: "Purchase Declined"
+    sequence: 2
+    group: grp-purchase-auth
+    origin:
+      source: src-001
+      bbox: [1310, 340, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.94
+
+  - id: evt-transaction-settled
+    name: "Transaction Settled"
+    sequence: 3
+    group: grp-settlement
+    origin:
+      source: src-001
+      bbox: [2200, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.93
+
+  - id: evt-merchant-paid
+    name: "Merchant Paid"
+    sequence: 3
+    group: grp-settlement
+    origin:
+      source: src-001
+      bbox: [2200, 340, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.93
+
+  - id: evt-statement-generated
+    name: "Statement Generated"
+    sequence: 4
+    group: grp-billing
+    origin:
+      source: src-001
+      bbox: [2720, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.94
+
+  - id: evt-payment-received
+    name: "Payment Received"
+    sequence: 5
+    group: grp-billing
+    origin:
+      source: src-001
+      bbox: [3320, 200, 140, 90]
+      color_observed: "#FF8C00"
+      text_confidence: 0.94
+
+# =============================================================================
+# COMMANDS
+# =============================================================================
+
+commands:
+  - id: cmd-issue-credit-card
+    name: "Issue Credit Card"
+    sequence: 1
+    initiated_by:
+      actor: act-card-holder
+    targets:
+      aggregate: agg-credit-card
+    emits:
+      - evt-credit-card-issued
+    group: grp-card-issuance
+    origin:
+      source: src-001
+      bbox: [260, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.93
+
+  - id: cmd-authorize-purchase
+    name: "Authorize Purchase"
+    sequence: 2
+    initiated_by:
+      actor: act-merchant
+    targets:
+      aggregate: agg-purchase-auth
+    emits:
+      - evt-purchase-authorized
+      - evt-purchase-declined
+    group: grp-purchase-auth
+    origin:
+      source: src-001
+      bbox: [1070, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.93
+
+  - id: cmd-settle-transactions
+    name: "Settle Transactions"
+    sequence: 3
+    initiated_by:
+      policy: pol-end-of-day-settlement
+    emits:
+      - evt-transaction-settled
+      - evt-merchant-paid
+    group: grp-settlement
+    notes: >
+      Batch command operating on multiple Purchase Authorizations.
+      No aggregate sticky in the settlement zone — the team agreed
+      settlement operates on the Purchase Authorization aggregate
+      from grp-purchase-auth.
+    origin:
+      source: src-001
+      bbox: [2010, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.92
+
+  - id: cmd-generate-statement
+    name: "Generate Statement"
+    sequence: 4
+    targets:
+      aggregate: agg-monthly-statement
+    emits:
+      - evt-statement-generated
+    group: grp-billing
+    notes: >
+      No actor or policy trigger visible on the board. The team
+      discussed this being a monthly batch process but did not add
+      a separate policy sticky for it.
+    origin:
+      source: src-001
+      bbox: [2510, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.93
+
+  - id: cmd-pay-statement
+    name: "Pay Statement"
+    sequence: 5
+    initiated_by:
+      actor: act-card-holder-billing
+    targets:
+      aggregate: agg-monthly-statement
+    emits:
+      - evt-payment-received
+    group: grp-billing
+    notes: >
+      Can also be triggered by pol-autopay for enrolled customers.
+      Arrow from act-card-holder-billing and from pol-autopay both
+      point to this command. The actor-initiated path is the manual
+      payment; the policy-initiated path is automatic. ESML allows
+      only one initiated_by, so the actor (manual) path is recorded
+      here; the policy path is captured in pol-autopay.triggers.
+    origin:
+      source: src-001
+      bbox: [3120, 200, 140, 90]
+      color_observed: "#4169E1"
+      text_confidence: 0.94
+
+# =============================================================================
+# AGGREGATES
+# =============================================================================
+
+aggregates:
+  - id: agg-credit-card
+    name: "Credit Card"
+    receives:
+      - cmd-issue-credit-card
+    produces:
+      - evt-credit-card-issued
+    group: grp-card-issuance
+    origin:
+      source: src-001
+      bbox: [280, 340, 150, 110]
+      color_observed: "#FFD700"
+      text_confidence: 0.96
+
+  - id: agg-purchase-auth
+    name: "Purchase Authorization"
+    receives:
+      - cmd-authorize-purchase
+    produces:
+      - evt-purchase-authorized
+      - evt-purchase-declined
+    group: grp-purchase-auth
+    notes: >
+      Team initially considered naming this "Transaction" but refined
+      to "Purchase Authorization" for precision. A crossed-out
+      "Transaction" sticky is visible near this aggregate.
+    origin:
+      source: src-001
+      bbox: [1080, 370, 170, 110]
+      color_observed: "#FFD700"
+      text_confidence: 0.94
+
+  - id: agg-monthly-statement
+    name: "Monthly Statement"
+    receives:
+      - cmd-generate-statement
+      - cmd-pay-statement
+    produces:
+      - evt-statement-generated
+      - evt-payment-received
+    group: grp-billing
+    origin:
+      source: src-001
+      bbox: [2540, 350, 150, 110]
+      color_observed: "#FFD700"
+      text_confidence: 0.94
+
+# =============================================================================
+# POLICIES
+# =============================================================================
+
+policies:
+  - id: pol-notify-fraud-on-decline
+    name: "When Declined → Notify Fraud"
+    rule: "Whenever Purchase Declined (with fraud indicators), notify Fraud Detection System"
+    listens_to:
+      - evt-purchase-declined
+    group: grp-purchase-auth
+    notes: >
+      The team discussed that only fraud-related declines trigger
+      this notification, not all declines. The policy has a condition
+      but the board shows the simplified version.
+    origin:
+      source: src-001
+      bbox: [1310, 530, 160, 90]
+      color_observed: "#9370DB"
+      text_confidence: 0.91
+
+  - id: pol-end-of-day-settlement
+    name: "End of Day → Settle"
+    rule: "At end of each business day, settle all authorized transactions"
+    triggers:
+      - cmd-settle-transactions
+    group: grp-settlement
+    notes: >
+      Time-triggered policy with no event-based listens_to. The
+      arrow labeled "Daily Batch" from evt-purchase-authorized to
+      this policy is a connector label describing the integration
+      pattern, not a sticky.
+    origin:
+      source: src-001
+      bbox: [1800, 200, 160, 90]
+      color_observed: "#9370DB"
+      text_confidence: 0.92
+
+  - id: pol-autopay
+    name: "Statement Gen. → AutoPay"
+    rule: "Whenever Statement Generated, if AutoPay is enrolled, trigger payment from bank account"
+    listens_to:
+      - evt-statement-generated
+    triggers:
+      - cmd-pay-statement
+    group: grp-billing
+    origin:
+      source: src-001
+      bbox: [2820, 530, 160, 90]
+      color_observed: "#9370DB"
+      text_confidence: 0.92
+
+# =============================================================================
+# READ MODELS
+# =============================================================================
+
+read_models:
+  - id: rm-card-transactions
+    name: "Card Transactions"
+    description: >
+      Shows the card holder their recent transactions, current balance,
+      and statement details before they decide to pay.
+    informs:
+      - cmd-pay-statement
+    group: grp-billing
+    origin:
+      source: src-001
+      bbox: [2920, 200, 140, 90]
+      color_observed: "#3CB371"
+      text_confidence: 0.93
+
+# =============================================================================
+# EXTERNAL SYSTEMS
+# =============================================================================
+
+external_systems:
+  - id: sys-fraud-detection
+    name: "Fraud Detection System"
+    group: grp-purchase-auth
+    notes: >
+      Consulted during purchase authorization (provides fraud scoring)
+      and receives notifications for fraud-related declines. Arrow from
+      pol-notify-fraud-on-decline points to this system.
+    origin:
+      source: src-001
+      bbox: [910, 560, 200, 70]
+      color_observed: "#F0F0F0"
+      text_confidence: 0.93
+
+  - id: sys-payment-network
+    name: "Payment Network"
+    group: grp-settlement
+    notes: >
+      External settlement network (e.g., Visa/Mastercard) through
+      which merchant payments are processed.
+    origin:
+      source: src-001
+      bbox: [2160, 480, 190, 70]
+      color_observed: "#F0F0F0"
+      text_confidence: 0.92
+
+  - id: sys-bank-account
+    name: "Bank Account System"
+    group: grp-billing
+    notes: >
+      The existing Bringots internet banking system (BringotsWeb).
+      Handles AutoPay debits and manual statement payments from the
+      customer's bank account.
+    origin:
+      source: src-001
+      bbox: [3320, 440, 200, 70]
+      color_observed: "#F0F0F0"
+      text_confidence: 0.93
+
+# =============================================================================
+# HOTSPOTS
+# =============================================================================
+
+hotspots:
+  - id: hot-credit-limit-rules
+    name: "What determines credit limit?"
+    description: >
+      No agreement on how the initial credit limit is determined.
+      Depends on account history, income, credit score — rules not
+      yet defined.
+    near:
+      - agg-credit-card
+      - cmd-issue-credit-card
+    origin:
+      source: src-001
+      bbox: [350, 510, 130, 80]
+      color_observed: "#FF6B6B"
+      text_confidence: 0.88
+
+  - id: hot-fraud-rules
+    name: "Which fraud rules apply?"
+    description: >
+      Unclear which specific fraud rules and thresholds determine
+      when an authorization should be declined and when to notify
+      the fraud detection system.
+    near:
+      - pol-notify-fraud-on-decline
+      - sys-fraud-detection
+    origin:
+      source: src-001
+      bbox: [1310, 690, 130, 80]
+      color_observed: "#FF6B6B"
+      text_confidence: 0.87
+
+# =============================================================================
+# UNRESOLVED
+# =============================================================================
+
+unresolved:
+  - id: unresolved-001
+    suspected_type: unknown
+    text_raw: "Daily Batch"
+    notes: >
+      Arrow label on the connector between evt-purchase-authorized
+      (grp-purchase-auth) and pol-end-of-day-settlement
+      (grp-settlement). Describes the integration pattern — authorized
+      transactions are accumulated and settled in a daily batch. This
+      is text on an arrow, not a sticky note.
+    origin:
+      source: src-001
+      bbox: [1570, 185, 80, 15]
+      color_observed: "#666666"
+      text_confidence: 0.90
+
+# =============================================================================
+# CONFIDENCE
+# =============================================================================
+
+confidence_defaults:
+  overall_text_extraction: 0.93
+  overall_classification: 0.92
+  notes: >
+    Synthetic board (SVG) with clear text and unambiguous colors.
+    All stickies are well-separated. The crossed-out "Transaction"
+    sticky near the Purchase Authorization aggregate is intentionally
+    excluded from the ESML elements — it is a discarded name, not
+    an active element.
