@@ -121,6 +121,19 @@ bounded_contexts:
       knowledge of both the itinerary (Booking's data) and handling events
       (Tracking's data).
 
+    modules:
+      - id: mod-cargo-management
+        name: "Cargo Management"
+        description: >
+          Groups the Cargo aggregate with its value objects (RouteSpecification,
+          Itinerary, Leg, Delivery), the RoutingService, and the delivery
+          derivation policy. This is the core module of the Booking context.
+        contains:
+          - agg-cargo
+          - svc-routing
+          - pol-derive-delivery-on-handling
+        status: accepted
+
     ubiquitous_language:
       - id: term-cargo
         term: "Cargo"
@@ -255,7 +268,7 @@ bounded_contexts:
           - id: vo-leg
             name: "Leg"
             attributes:
-              - name: voyageId
+              - name: voyageNumber
                 type: VoyageNumber
                 description: "Reference to the voyage this leg travels on"
               - name: loadLocation
@@ -264,10 +277,10 @@ bounded_contexts:
               - name: unloadLocation
                 type: Location
                 description: "Where cargo is unloaded from the vessel"
-              - name: loadTime
+              - name: expectedLoadTime
                 type: DateTime
                 description: "Expected loading time"
-              - name: unloadTime
+              - name: expectedUnloadTime
                 type: DateTime
                 description: "Expected unloading time"
             equality: all_attributes
@@ -543,6 +556,7 @@ bounded_contexts:
           current itinerary.
         trigger_events:
           - evt-cargo-handled
+          - evt-voyage-delayed
         issues_commands:
           - cmd-derive-delivery
         rule: >
@@ -584,6 +598,19 @@ bounded_contexts:
           - svc-routing
         handles:
           - cmd-assign-itinerary
+        status: accepted
+
+      - id: app-change-destination
+        name: "Change Destination Service"
+        description: >
+          Orchestrates destination change: validates the new destination,
+          updates the route specification, and invalidates the current
+          itinerary if it no longer satisfies the specification.
+        use_case: "Customer changes the destination of a booked cargo"
+        coordinates:
+          - repo-cargo
+        handles:
+          - cmd-change-destination
         status: accepted
 
     read_models:
@@ -635,6 +662,17 @@ bounded_contexts:
       context is an event publisher — it doesn't interpret what the events
       mean for delivery status.
 
+    modules:
+      - id: mod-handling
+        name: "Handling"
+        description: >
+          Groups the Handling Event aggregate with its registration command
+          and the CargoHandled integration event. Encapsulates all handling
+          event recording logic.
+        contains:
+          - agg-handling-event
+        status: accepted
+
     ubiquitous_language:
       - id: term-handling-event
         term: "Handling Event"
@@ -648,6 +686,33 @@ bounded_contexts:
           The type of physical activity: RECEIVE, LOAD, UNLOAD, CUSTOMS,
           CLAIM. Each type has specific validation rules about what state
           the cargo should be in.
+      - id: term-receive
+        term: "Receive"
+        definition: >
+          Handling event type indicating cargo has been physically received
+          at the origin port. This is the first handling event in a cargo's
+          lifecycle.
+      - id: term-load
+        term: "Load"
+        definition: >
+          Handling event type indicating cargo has been loaded onto a vessel
+          for a specific voyage. Must reference a voyage number.
+      - id: term-unload
+        term: "Unload"
+        definition: >
+          Handling event type indicating cargo has been unloaded from a
+          vessel at a port. Must reference the voyage it was traveling on.
+      - id: term-customs
+        term: "Customs"
+        definition: >
+          Handling event type indicating cargo has cleared customs at a
+          port. Does not reference a voyage.
+      - id: term-claim
+        term: "Claim"
+        definition: >
+          Handling event type indicating the customer has claimed the cargo
+          at the final destination. This is the last handling event in a
+          cargo's lifecycle.
 
     aggregates:
       - id: agg-handling-event
@@ -705,6 +770,24 @@ bounded_contexts:
           - "RECEIVE, CUSTOMS, and CLAIM events must not reference a voyage"
           - "The cargo referenced by trackingId must exist"
           - "CompletionTime must not be in the future"
+
+        specifications:
+          - id: spec-handling-event-shape-valid
+            name: "Handling Event Shape Valid"
+            description: >
+              Validates the required shape of a handling event based on its
+              type. LOAD and UNLOAD events require a voyageNumber;
+              RECEIVE, CUSTOMS, and CLAIM events must have voyageNumber
+              null. Ensures structural consistency before persisting.
+            predicate: >
+              (eventType in [LOAD, UNLOAD] && voyageNumber != null) ||
+              (eventType in [RECEIVE, CUSTOMS, CLAIM] && voyageNumber == null)
+            status: accepted
+            notes: >
+              This specification formalizes the invariant rules about
+              voyage number presence into a reusable predicate, following
+              Evans' Specification pattern. Used during command validation
+              in Register Handling Event.
 
         domain_events:
           - id: evt-cargo-handled
@@ -897,6 +980,20 @@ bounded_contexts:
             - "findByVoyageNumber"
           status: accepted
 
+    application_services:
+      - id: app-schedule-voyage
+        name: "Schedule Voyage Service"
+        description: >
+          Orchestrates voyage scheduling: validates the schedule of carrier
+          movements, creates the voyage, persists via repository, and
+          publishes VoyageScheduled.
+        use_case: "Scheduling department creates a new voyage"
+        coordinates:
+          - repo-voyage
+        handles:
+          - cmd-schedule-voyage
+        status: accepted
+
   # ---------------------------------------------------------------------------
   # ROUTING CONTEXT
   # ---------------------------------------------------------------------------
@@ -917,6 +1014,15 @@ bounded_contexts:
       RoutingService provides the domain-facing interface, while the actual
       algorithm may be a third-party system. In the dddsample reference
       implementation, this is backed by a graph traversal algorithm.
+
+    ubiquitous_language:
+      - id: term-candidate-itinerary
+        term: "Candidate Itinerary"
+        definition: >
+          A proposed route returned by the routing engine that satisfies a
+          route specification. Multiple candidates may be returned for a
+          single request, allowing operations to select the best option
+          based on cost, time, or other criteria.
 
     domain_services:
       - id: svc-route-finder
@@ -950,6 +1056,32 @@ bounded_contexts:
     notes: >
       This is the simplest context — essentially a reference data service.
       Locations are shared across all contexts but owned here.
+
+    modules:
+      - id: mod-location-reference
+        name: "Location Reference"
+        description: >
+          Groups the Location aggregate and its repository. Provides the
+          reference data service for all contexts that need port and
+          location information.
+        contains:
+          - agg-location
+        status: accepted
+
+    ubiquitous_language:
+      - id: term-location
+        term: "Location"
+        definition: >
+          A port, terminal, or logistics hub in the global shipping network.
+          Identified by a UN/LOCODE. Used as origin, destination, and
+          intermediate stop across all bounded contexts.
+      - id: term-unlocode
+        term: "UN/LOCODE"
+        definition: >
+          United Nations Code for Trade and Transport Locations. A
+          standardized 5-character code (e.g., USNYC, SESTO, CNHKG) that
+          uniquely identifies a location in international trade and
+          transport.
 
     aggregates:
       - id: agg-location

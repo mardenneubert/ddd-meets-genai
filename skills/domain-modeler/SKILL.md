@@ -405,6 +405,20 @@ This replaces the need for a separate "reviewer" skill.
 - Context map relationship types are from the valid set.
 - Symmetric relationships use `participants`, not `upstream`/`downstream`.
 
+**Bounded context boundary check:**
+- For every attribute type on an entity or value object, verify the type
+  does not name an entity or aggregate from a **different** bounded
+  context. If context A needs to reference data that originates in
+  context B, it must hold its own local representation — a local value
+  object, an ID reference, or a projected summary — never a direct
+  reference to context B's entity or aggregate type. Cross-BC type
+  references indicate a boundary violation. For example, if a Cargo
+  entity in the Booking context has an attribute typed as
+  `HandlingEvent[]` where HandlingEvent is the aggregate root of the
+  Tracking context, that is a boundary violation. The Booking context
+  should instead receive integration events and derive what it needs
+  locally.
+
 **Run the validation script:**
 
 ```bash
