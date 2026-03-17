@@ -1,0 +1,1436 @@
+dmml: "0.1.0"
+
+model:
+  name: "Joe's Pizza Place"
+  description: >
+    Domain model for Joe's Pizza Place, an online-only pizza delivery
+    service in São Paulo, Brazil. Covers the full order-to-delivery
+    lifecycle: customer ordering (pizza selection, delivery info, payment),
+    kitchen preparation (prep, bake, box, pack), and delivery to the
+    customer. The pizza shop uses a classic brick oven and employs its
+    own delivery drivers organized by neighborhood zones.
+  status: proposed
+  date: "2026-03-17"
+  authors:
+    - "Joseph Yoder (domain exercise)"
+    - "Marden Neubert (DMML adaptation)"
+  esml_source: "joes-pizza-es-board-reference.esml.yaml"
+  notes: >
+    Gold path model: derived from a design-level ESML board plus two
+    workshop transcripts. Session 1 covered big-picture events, commands,
+    actors, and external systems. Session 2 added aggregate fields and
+    zone labeling (Orders, Kitchen, Delivery). Key strategic decisions:
+    (1) Three bounded contexts mapping directly to the three ESML groups,
+    justified by the three pivotal events marking clear phase boundaries.
+    (2) Payment is fully external — Joe explicitly decided "the payment
+    system may have that, but we don't need it within our system —
+    otherwise we have to deal with PCI compliance." (3) Kitchen only
+    needs order items, not customer info — "they don't care who it's for."
+    (4) Delivery needs customer contact info and delivery instructions
+    but a different view from Orders. Some policies are inferred from
+    transcript discussion of automated flows (e.g., kitchen notification)
+    but are not on the board — these are marked as draft.
+
+# =============================================================================
+# STRATEGIC DESIGN
+# =============================================================================
+
+subdomains:
+  - id: sd-ordering
+    name: "Ordering"
+    classification: core
+    description: >
+      The customer-facing order capture capability: browsing the menu,
+      selecting pizzas with type and toppings, entering delivery info,
+      and processing payment. This is the primary revenue-generating
+      touchpoint and the first impression for customers.
+    business_value: >
+      Direct revenue capture. The ordering experience (ease of use,
+      menu presentation, payment flexibility with credit card and PIX)
+      is a key differentiator for an online-only pizza service.
+    status: proposed
+    notes: >
+      Core because Joe's Pizza is online-only — the ordering experience
+      IS the storefront. Joe discusses multiple payment methods (credit
+      card, PIX) and emphasizes that "if the payment is not completed,
+      you're not going to place any order." The quality of this flow
+      directly impacts conversion.
+
+  - id: sd-kitchen-operations
+    name: "Kitchen Operations"
+    classification: core
+    description: >
+      Pizza preparation, baking, and order packing. The kitchen is where
+      Joe's Pizza delivers its product — a handmade brick-oven pizza.
+      Covers the full flow from receiving an order through prep, baking,
+      and packing for delivery.
+    business_value: >
+      Product quality and speed. The brick oven, prep technique, and
+      kitchen coordination are what make Joe's Pizza worth ordering.
+      Kitchen throughput directly affects delivery times and customer
+      satisfaction.
+    status: proposed
+    notes: >
+      Core because the kitchen IS the product. Joe's expertise with
+      a classic brick oven, his prep techniques, and the quality of
+      the pizza are the competitive advantage. The transcript reveals
+      deep domain knowledge: "We prep the pizza to be cooked — that's
+      the term that we use." The detailed event flow (prep → bake →
+      box → pack) reflects real kitchen operations.
+
+  - id: sd-delivery
+    name: "Delivery"
+    classification: supporting
+    description: >
+      Order delivery to customers using Joe's own delivery drivers,
+      organized by neighborhood zones in São Paulo. Covers driver
+      notification, order pickup, delivery, and confirmation.
+    business_value: >
+      Timely delivery is essential for customer satisfaction, but the
+      delivery mechanics themselves are not a differentiator — many
+      pizza shops use similar driver networks or could outsource to
+      delivery platforms.
+    status: proposed
+    notes: >
+      Supporting because delivery is necessary but not where Joe's
+      Pizza differentiates. Joe organizes drivers by neighborhood
+      (e.g., "Pinheiros") and uses informal notification ("maybe we
+      message our drivers... WhatsApp"). This could be outsourced to
+      iFood or Rappi without changing the core business. Delivery
+      radius policy was discussed (5 km free, 15 km max) but deferred
+      to a future session.
+
+  - id: sd-payments
+    name: "Payments"
+    classification: generic
+    description: >
+      External payment processing for credit cards and PIX. Fully
+      outsourced to avoid PCI compliance requirements.
+    business_value: >
+      Enables revenue collection. No competitive advantage — standard
+      payment processing that any online business needs.
+    status: accepted
+    notes: >
+      Generic because Joe explicitly decided to keep payment processing
+      external: "The payment system may have that, but we don't need it
+      within our system — otherwise we have to deal with PCI compliance."
+      This is a buy-not-build decision.
+
+# =============================================================================
+# BOUNDED CONTEXTS
+# =============================================================================
+
+bounded_contexts:
+  # ---------------------------------------------------------------------------
+  # ORDER MANAGEMENT CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-order-management
+    name: "Order Management"
+    subdomain: sd-ordering
+    description: >
+      Manages the customer-facing order lifecycle from initial request
+      through pizza selection, delivery information entry, payment
+      processing, and order placement. Owns the Customer and Order
+      aggregates in the ordering context.
+    responsibilities:
+      - "Capture customer information (name, phone, address)"
+      - "Accept pizza selections with type, toppings, and quantity"
+      - "Collect delivery information and instructions"
+      - "Initiate and confirm payment via external Payment System"
+      - "Place the order and emit the pivotal Order Placed event"
+    status: proposed
+    notes: >
+      Maps directly to ESML grp-orders. The ordering flow has an
+      interesting concurrency: pizza selection and delivery info entry
+      can happen in either order ("they can happen in either order" —
+      Joe). Payment must happen after both are complete. Order Placed
+      is the first pivotal event and the handoff to Kitchen.
+
+    ubiquitous_language:
+      - id: term-order
+        term: "Order"
+        definition: >
+          A customer's request for one or more pizzas to be prepared
+          and delivered. Contains item selections, delivery information,
+          and payment status. An order is not "placed" until payment is
+          completed.
+      - id: term-customer
+        term: "Customer"
+        definition: >
+          The person placing the online order. Identified by name, phone
+          number, and delivery address.
+      - id: term-order-item
+        term: "Order Item"
+        definition: >
+          A single line in an order specifying a pizza (or other item)
+          with its type, toppings, and quantity. Joe: "every pizza will
+          have items... the item and the quantity."
+      - id: term-pizza-type
+        term: "Pizza Type"
+        definition: >
+          The variety of pizza being ordered (e.g., pepperoni, cheese).
+          Combined with toppings and size to fully describe a pizza
+          selection.
+      - id: term-delivery-instructions
+        term: "Delivery Instructions"
+        definition: >
+          Special instructions for the delivery person, such as "leave
+          it on the porch" or "ring this code." Part of the order, not
+          just the customer profile.
+      - id: term-payment
+        term: "Payment"
+        definition: >
+          The financial transaction processed by the external Payment
+          System. Supports credit card and PIX. Must be completed
+          before an order can be placed.
+
+    aggregates:
+      - id: agg-customer
+        name: "Customer"
+        description: >
+          Represents the customer placing an online order. Stores
+          contact and delivery information needed across the ordering
+          and delivery contexts.
+        status: proposed
+        notes: >
+          Maps to ESML agg-customer-orders. Session 2 identified fields:
+          name, phone number, address. The board shows Customer as a
+          separate aggregate from Order. Whether Customer should have
+          independent lifecycle (customer accounts, returning customers)
+          or be embedded as a value object within Order is an open
+          question — the transcripts don't discuss customer accounts.
+          Kept as a separate aggregate to respect the board layout and
+          because delivery needs customer info independently of order.
+
+        root_entity:
+          id: ent-customer
+          name: "Customer"
+          identity:
+            attribute: customerId
+            type: UUID
+            generation: system
+          attributes:
+            - name: customerId
+              type: UUID
+              description: "Unique identifier for the customer"
+            - name: name
+              type: string
+              description: "Customer's full name"
+            - name: phoneNumber
+              type: string
+              description: "Customer's phone number for delivery contact"
+            - name: address
+              type: DeliveryAddress
+              description: "Customer's delivery address"
+          status: proposed
+          notes: >
+            Minimal entity — Joe listed exactly these three fields in
+            Session 2: "obviously I'm going to need the name... phone
+            number... address." No discussion of email, account status,
+            or order history.
+
+        value_objects:
+          - id: vo-delivery-address
+            name: "DeliveryAddress"
+            attributes:
+              - name: street
+                type: string
+                description: "Street address for delivery"
+              - name: city
+                type: string
+                description: "City (São Paulo)"
+              - name: neighborhood
+                type: string
+                description: "Neighborhood — relevant for driver assignment"
+            equality: all_attributes
+            status: draft
+            notes: >
+              Address structure not discussed in detail. Neighborhood is
+              inferred from Joe's driver organization by zones (e.g.,
+              "Pinheiros"). In São Paulo, neighborhood is a critical
+              component of addresses.
+
+        invariants:
+          - "Customer must have a name"
+          - "Customer must have a phone number or address for delivery"
+
+        commands:
+          - id: cmd-register-customer
+            name: "Register Customer"
+            description: >
+              Create or update customer information during the ordering
+              process. Part of the order flow, not a standalone
+              registration.
+            attributes:
+              - { name: name, type: string }
+              - { name: phoneNumber, type: string }
+              - { name: address, type: DeliveryAddress }
+            emits: []
+            status: draft
+            notes: >
+              No explicit command on the board for customer creation.
+              The ESML cmd-enter-delivery-information covers both
+              customer contact info and delivery instructions. This
+              command is inferred as the Customer aggregate's portion
+              of that flow. Marked draft since the board doesn't
+              distinguish customer registration from order configuration.
+
+        domain_events: []
+
+        repository:
+          id: repo-customer
+          name: "CustomerRepository"
+          operations:
+            - "save"
+            - "findByCustomerId"
+            - "findByPhoneNumber"
+          status: draft
+
+      - id: agg-order
+        name: "Order"
+        description: >
+          The central aggregate in the ordering context. Represents a
+          customer's pizza order with its items, delivery instructions,
+          price, and payment status. Enforces the ordering flow:
+          selection → delivery info → payment → placement.
+        status: proposed
+        notes: >
+          Maps to ESML agg-order-orders. Session 2 identified fields:
+          items (item + quantity), type, topping, price, delivery
+          instructions. The aggregate appears in all three ESML zones
+          (Orders, Kitchen, Delivery) but with different views — this
+          DMML aggregate represents the Orders zone view. Kitchen and
+          Delivery have their own bounded-context-specific aggregates.
+
+        root_entity:
+          id: ent-order
+          name: "Order"
+          identity:
+            attribute: orderId
+            type: UUID
+            generation: system
+          lifecycle:
+            - Created
+            - Configuring
+            - PaymentPending
+            - Paid
+            - Placed
+          attributes:
+            - name: orderId
+              type: UUID
+              description: "Unique identifier for the order"
+            - name: customerId
+              type: UUID
+              description: "Reference to the customer placing the order"
+            - name: items
+              type: "OrderItem[]"
+              description: "List of pizzas/items in the order"
+            - name: deliveryInstructions
+              type: string
+              description: "Special delivery instructions (e.g., leave on porch)"
+              nullable: true
+            - name: price
+              type: Money
+              description: "Total order price"
+            - name: status
+              type: OrderStatus
+              description: "Current lifecycle state"
+            - name: placedAt
+              type: DateTime
+              description: "When the order was placed (pivotal moment)"
+              nullable: true
+          status: proposed
+          notes: >
+            Lifecycle derived from the ESML event sequence: Created
+            (Order Requested, seq 1), Configuring (pizza selection and
+            delivery info, seq 2 — concurrent), PaymentPending (payment
+            info entered, seq 3), Paid (payment completed, seq 4),
+            Placed (order placed, seq 5 — pivotal). The concurrent
+            nature of pizza selection and delivery info entry means
+            the Configuring state accepts both in any order.
+
+        entities:
+          - id: ent-order-item
+            name: "OrderItem"
+            identity:
+              attribute: itemId
+              type: UUID
+              generation: system
+            attributes:
+              - name: itemId
+                type: UUID
+                description: "Unique identifier for this line item"
+              - name: pizzaType
+                type: string
+                description: "Type of pizza (e.g., pepperoni, cheese)"
+              - name: toppings
+                type: "string[]"
+                description: "Selected toppings for this pizza"
+              - name: quantity
+                type: int
+                description: "Number of this item"
+                constraints: ["min=1"]
+            status: proposed
+            notes: >
+              Maps to Session 2 discussion: "the items itself... the item
+              and the quantity" and "the type and the topping." Joe
+              described each item having what it is, the quantity, and
+              for pizza specifically the type and topping. Size was
+              mentioned ("large or small or medium") but not formally
+              added to the board.
+
+        value_objects:
+          - id: vo-money
+            name: "Money"
+            attributes:
+              - name: amount
+                type: decimal
+                constraints: ["min=0"]
+              - name: currency
+                type: string
+                constraints: ["ISO 4217, defaults to BRL"]
+            equality: all_attributes
+            status: proposed
+            notes: >
+              Standard money pattern. Currency defaults to BRL (Brazilian
+              Real) since Joe's Pizza operates in São Paulo. Session 2
+              confirmed price as an order attribute: "I would add one
+              other information to order, which is the price."
+
+        invariants:
+          - "Order must have at least one OrderItem"
+          - "Order must have customer information before placement"
+          - "Payment must be completed before order can be placed"
+          - "Price must be positive"
+          - "Delivery instructions are optional but delivery address is required"
+
+        domain_events:
+          - id: evt-order-requested
+            name: "Order Requested"
+            description: >
+              Emitted when a customer initiates a new order.
+            emitted_on: "Order creation (transition to Created)"
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: customerId, type: UUID }
+              - { name: requestedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-order-requested (seq 1). Joe: "The very
+              first thing that happens is you either come into the store
+              or you go online and you request — order requested."
+
+          - id: evt-type-of-pizzas-selected
+            name: "Type of Pizzas Selected"
+            description: >
+              Emitted when the customer selects pizza type(s) and toppings.
+            emitted_on: "Pizza selection during Configuring state"
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: items, type: "OrderItemSummary[]" }
+            status: proposed
+            notes: >
+              Maps to ESML evt-type-of-pizzas-selected (seq 2). Concurrent
+              with evt-delivery-information-entered — "they can happen in
+              either order."
+
+          - id: evt-delivery-information-entered
+            name: "Delivery Information Entered"
+            description: >
+              Emitted when the customer enters delivery address and
+              optional delivery instructions.
+            emitted_on: "Delivery info entry during Configuring state"
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: deliveryAddress, type: DeliveryAddress }
+              - { name: deliveryInstructions, type: string }
+            status: proposed
+            notes: >
+              Maps to ESML evt-delivery-information-entered (seq 2).
+              Concurrent with pizza selection. Joe initially called it
+              "Delivery Address Entered" then broadened to include
+              delivery instructions.
+
+          - id: evt-payment-information-entered
+            name: "Payment Information Entered"
+            description: >
+              Emitted when the customer provides payment details to
+              be sent to the external Payment System.
+            emitted_on: "Payment info entry (transition to PaymentPending)"
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: paymentMethod, type: string }
+            status: proposed
+            notes: >
+              Maps to ESML evt-payment-information-entered (seq 3).
+              Joe: "Credit card machine... or if they want to pay through
+              PIX, we'll take that too." The actual payment details
+              (card number, PIX key) are NOT stored — they go directly
+              to the Payment System.
+
+          - id: evt-payment-completed
+            name: "Payment Completed"
+            description: >
+              Emitted when the external Payment System confirms
+              successful payment.
+            emitted_on: "Payment confirmation (transition to Paid)"
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: paymentReference, type: string }
+              - { name: amount, type: Money }
+              - { name: paidAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-payment-completed (seq 4). This event
+              originates from the external Payment System callback.
+              Joe: "if a payment is completed, then the order is placed."
+              The transition from Paid to Placed is automatic (see
+              pol-place-order-on-payment).
+
+          - id: evt-order-placed
+            name: "Order Placed"
+            description: >
+              Pivotal event. Emitted when the order is finalized and
+              ready for kitchen preparation. Marks the boundary between
+              the Orders and Kitchen phases.
+            emitted_on: "Order finalization (transition to Placed)"
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: customerId, type: UUID }
+              - { name: items, type: "OrderItemSummary[]" }
+              - { name: deliveryAddress, type: DeliveryAddress }
+              - { name: deliveryInstructions, type: string }
+              - { name: price, type: Money }
+              - { name: placedAt, type: DateTime }
+            consumed_by:
+              - bc-kitchen
+            status: proposed
+            notes: >
+              Maps to ESML evt-order-placed (seq 5, pivotal). This is
+              the first pivotal event on the board. Everything downstream
+              depends on it. The payload includes all information needed
+              by the Kitchen context (items) and eventually by Delivery
+              (address, instructions). The Kitchen context only uses the
+              items; Delivery uses the customer and address info.
+
+        commands:
+          - id: cmd-request-order
+            name: "Request Order"
+            description: >
+              Initiate a new order. Creates the order in Created state.
+            attributes:
+              - { name: customerId, type: UUID }
+            preconditions:
+              - "Customer must exist"
+            emits:
+              - evt-order-requested
+            status: proposed
+            notes: >
+              Maps to ESML cmd-request-order (seq 1). Initiated by
+              act-customer-left.
+
+          - id: cmd-select-pizza-type
+            name: "Select Pizza Type"
+            description: >
+              Add or update pizza selections for the order. Specifies
+              pizza type, toppings, and quantity.
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: items, type: "OrderItemInput[]" }
+            preconditions:
+              - "Order must be in Created or Configuring state"
+            emits:
+              - evt-type-of-pizzas-selected
+            status: proposed
+            notes: >
+              Maps to ESML cmd-select-pizza-type (seq 2). Initiated by
+              act-customer-top. Can happen before or after delivery info
+              entry — "they can happen in either order."
+
+          - id: cmd-enter-delivery-information
+            name: "Enter Delivery Information"
+            description: >
+              Provide delivery address and optional delivery instructions.
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: deliveryAddress, type: DeliveryAddress }
+              - { name: deliveryInstructions, type: string }
+            preconditions:
+              - "Order must be in Created or Configuring state"
+            emits:
+              - evt-delivery-information-entered
+            status: proposed
+            notes: >
+              Maps to ESML cmd-enter-delivery-information (seq 2).
+              Initiated by act-customer-delivery-info. Joe: "We need the
+              customer's name and delivery address and phone number."
+              Also includes delivery instructions.
+
+          - id: cmd-enter-payment-information
+            name: "Enter Payment Information"
+            description: >
+              Provide payment details to be forwarded to the external
+              Payment System. Order transitions to PaymentPending.
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: paymentMethod, type: string }
+            preconditions:
+              - "Order must be in Configuring state"
+              - "Pizza selection and delivery info must be complete"
+            emits:
+              - evt-payment-information-entered
+            status: proposed
+            notes: >
+              Maps to ESML cmd-enter-payment-information (seq 3).
+              Initiated by act-customer-payment. The actual payment
+              details are forwarded to the Payment System via the ACL —
+              we don't store them.
+
+          - id: cmd-confirm-payment
+            name: "Confirm Payment"
+            description: >
+              Record payment confirmation from the external Payment
+              System. Transitions order to Paid.
+            attributes:
+              - { name: orderId, type: UUID }
+              - { name: paymentReference, type: string }
+              - { name: amount, type: Money }
+            preconditions:
+              - "Order must be in PaymentPending state"
+              - "Payment reference must be valid"
+            emits:
+              - evt-payment-completed
+            status: draft
+            notes: >
+              No explicit command on the ESML board — the board shows
+              evt-payment-completed as produced by interaction with the
+              external Payment System. This command represents the system
+              receiving the payment callback. Joe discussed the pattern:
+              "we redirect the user to the system... the user comes back
+              with the payment approved or denied." Marked draft since
+              it's inferred from the integration pattern.
+
+        repository:
+          id: repo-order
+          name: "OrderRepository"
+          operations:
+            - "save"
+            - "findByOrderId"
+            - "findByCustomerId"
+          status: proposed
+
+    policies:
+      - id: pol-place-order-on-payment
+        name: "Place Order on Payment Completion"
+        description: >
+          When payment is completed, automatically place the order and
+          emit the pivotal Order Placed event.
+        trigger_events:
+          - evt-payment-completed
+        rule: >
+          Whenever Payment Completed, then finalize the order and emit
+          Order Placed.
+        status: draft
+        notes: >
+          No explicit policy sticky on the ESML board. Inferred from
+          the transcript: Joe stated "if a payment is completed, then
+          the order is placed" — describing an automatic transition.
+          The board sequence (seq 4 Payment Completed → seq 5 Order
+          Placed) with no intervening command or actor confirms this
+          is an automated reaction, not a human action. Marked draft
+          because it's inferred.
+
+    application_services:
+      - id: app-place-order
+        name: "Place Order Service"
+        description: >
+          Orchestrates the order placement flow: validates that pizza
+          selection, delivery info, and payment are all complete, then
+          finalizes the order and publishes Order Placed.
+        use_case: "Customer completes the ordering process"
+        coordinates:
+          - repo-order
+          - repo-customer
+        handles:
+          - cmd-request-order
+          - cmd-select-pizza-type
+          - cmd-enter-delivery-information
+          - cmd-enter-payment-information
+          - cmd-confirm-payment
+        status: proposed
+
+  # ---------------------------------------------------------------------------
+  # KITCHEN CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-kitchen
+    name: "Kitchen"
+    subdomain: sd-kitchen-operations
+    description: >
+      Manages pizza preparation from order receipt through prep, baking,
+      and packing for delivery. Owns the KitchenOrder aggregate which
+      tracks each pizza through the preparation pipeline. The kitchen
+      only needs order items — it doesn't need customer information
+      or delivery details.
+    responsibilities:
+      - "Receive order details from Order Management"
+      - "Track individual pizza preparation through prep, bake, and box stages"
+      - "Coordinate the full order packing with delivery instructions"
+      - "Emit the pivotal Order Prepared & Packed event for delivery handoff"
+    status: proposed
+    notes: >
+      Maps directly to ESML grp-kitchen. The transcript makes clear
+      the kitchen has a restricted view: "the kitchen mostly needs
+      early on just the order" and "they don't care who it's for and
+      we don't care where it goes — we just need to know what kind of
+      order." The Kitchen zone has the most detailed event flow on the
+      board (8 events, 3 commands) reflecting the granular per-pizza
+      preparation steps.
+
+    ubiquitous_language:
+      - id: term-prep
+        term: "Prep"
+        definition: >
+          The pizza preparation stage before baking: getting dough ready,
+          applying sauce, cheese, and toppings. Joe: "We prep the pizza
+          to be cooked — that's the term that we use."
+      - id: term-bake
+        term: "Bake"
+        definition: >
+          Cooking the prepped pizza in the brick oven. Joe uses a classic
+          brick oven; timing is part experience, part timer.
+      - id: term-box
+        term: "Box"
+        definition: >
+          Packaging an individual baked pizza in a box. Happens per-pizza
+          before the full order is packed.
+      - id: term-pack
+        term: "Pack"
+        definition: >
+          Assembling all boxed pizzas for a single order together with
+          delivery instructions, ready for handoff to delivery. Joe:
+          "order packed for delivery — which would include the delivery
+          instructions."
+      - id: term-kitchen-order
+        term: "Kitchen Order"
+        definition: >
+          The kitchen's view of a customer order: just the items to
+          prepare (types, toppings, quantities). No customer info,
+          no delivery details, no price.
+
+    aggregates:
+      - id: agg-kitchen-order
+        name: "Kitchen Order"
+        description: >
+          Tracks an order through the kitchen pipeline. Contains
+          individual pizza preparation tracking. The root entity
+          represents the full order; child entities represent
+          individual pizzas being prepared.
+        status: proposed
+        notes: >
+          Maps to ESML agg-order-kitchen. The kitchen's view of
+          Order is intentionally slim — "they don't care who it's
+          for" — containing only the item list needed for preparation.
+          This is a different bounded context's view of the same
+          real-world concept (an order), a classic DDD pattern.
+
+        root_entity:
+          id: ent-kitchen-order
+          name: "KitchenOrder"
+          identity:
+            attribute: kitchenOrderId
+            type: UUID
+            generation: system
+          lifecycle:
+            - Received
+            - InPreparation
+            - Packed
+          attributes:
+            - name: kitchenOrderId
+              type: UUID
+              description: "Internal identifier for kitchen tracking"
+            - name: sourceOrderId
+              type: UUID
+              description: "Reference to the originating order in Order Management"
+            - name: items
+              type: "KitchenItem[]"
+              description: "List of pizzas to prepare"
+            - name: deliveryInstructions
+              type: string
+              description: "Included for packing — attached to the packed order"
+              nullable: true
+            - name: receivedAt
+              type: DateTime
+              description: "When the kitchen received this order"
+          status: proposed
+          notes: >
+            sourceOrderId is a UUID reference, not a direct entity
+            reference — respecting the BC boundary between Order
+            Management and Kitchen. deliveryInstructions is included
+            because "order packed for delivery — which would include
+            the delivery instructions" (Joe).
+
+        entities:
+          - id: ent-pizza-preparation
+            name: "PizzaPreparation"
+            identity:
+              attribute: prepId
+              type: UUID
+              generation: system
+            lifecycle:
+              - Queued
+              - Prepping
+              - Prepped
+              - InOven
+              - Baked
+              - Boxed
+            attributes:
+              - name: prepId
+                type: UUID
+                description: "Unique identifier for this pizza preparation"
+              - name: pizzaType
+                type: string
+                description: "Type of pizza to prepare"
+              - name: toppings
+                type: "string[]"
+                description: "Toppings for this pizza"
+              - name: quantity
+                type: int
+                description: "Number of this type to prepare"
+            status: proposed
+            notes: >
+              Lifecycle derived from the ESML kitchen events: Queued
+              (initial), Prepping (evt-pizza-prep-started), Prepped
+              (evt-pizza-prep-finished), InOven (evt-pizza-put-in-oven),
+              Baked (evt-pizza-baked + evt-pizza-pulled-out-of-oven),
+              Boxed (evt-pizza-boxed). This child entity tracks
+              individual pizzas through the preparation pipeline.
+
+        invariants:
+          - "Kitchen order must have at least one item"
+          - "All pizzas must be Boxed before order can be Packed"
+          - "Kitchen order cannot be Packed if any pizza is still in preparation"
+
+        domain_events:
+          - id: evt-kitchen-notified
+            name: "Kitchen Notified"
+            description: >
+              Emitted when the kitchen receives a new order from Order
+              Management. Transitions the KitchenOrder to Received.
+            emitted_on: "Order receipt (transition to Received)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: sourceOrderId, type: UUID }
+              - { name: items, type: "KitchenItem[]" }
+              - { name: receivedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-kitchen-notified (seq 6). The transcript
+              says: "once you order placed, that's an event that notifies"
+              and "this automatically triggers this."
+
+          - id: evt-pizza-prep-started
+            name: "Pizza Prep Started"
+            description: >
+              Emitted when a pizza chef begins preparing a pizza.
+            emitted_on: "Chef starts prep (PizzaPreparation to Prepping)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+              - { name: startedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-pizza-prep-started (seq 7). Triggered by
+              cmd-prep-pizza, initiated by the Pizza Chef.
+
+          - id: evt-pizza-prep-finished
+            name: "Pizza Prep Finished"
+            description: >
+              Emitted when the pizza is fully prepped and ready for the
+              oven. Dough, sauce, cheese, and toppings are placed.
+            emitted_on: "Prep completion (PizzaPreparation to Prepped)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+              - { name: finishedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-pizza-prep-finished (seq 8). No explicit
+              command on the board — this is the outcome of the prep
+              process started by cmd-prep-pizza.
+
+          - id: evt-pizza-put-in-oven
+            name: "Pizza Put in Oven"
+            description: >
+              Emitted when the prepped pizza is placed in the brick oven.
+            emitted_on: "Oven placement (PizzaPreparation to InOven)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+              - { name: ovenedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-pizza-put-in-oven (seq 9). Triggered by
+              cmd-cook-pizza. Joe: "after you prep it, usually you slide
+              it into the oven."
+
+          - id: evt-pizza-baked
+            name: "Pizza Baked"
+            description: >
+              Emitted when the pizza is done baking in the oven.
+            emitted_on: "Baking completion (PizzaPreparation stays InOven → Baked)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+              - { name: bakedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-pizza-baked (seq 10). No explicit command
+              — this is a time-based outcome. Joe: "First you prep it
+              and then you bake it." Timing is part experience, part
+              timer with the brick oven.
+
+          - id: evt-pizza-pulled-out-of-oven
+            name: "Pizza Pulled out of Oven"
+            description: >
+              Emitted when the baked pizza is removed from the oven.
+            emitted_on: "Oven extraction (PizzaPreparation remains Baked)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+              - { name: pulledAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-pizza-pulled-out-of-oven (seq 11). No
+              explicit command on the board — the pizza chef pulls the
+              pizza out when it's ready.
+
+          - id: evt-pizza-boxed
+            name: "Pizza Boxed"
+            description: >
+              Emitted when an individual pizza is placed in a box.
+            emitted_on: "Boxing (PizzaPreparation to Boxed)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+              - { name: boxedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-pizza-boxed (seq 12). Part of the packing
+              flow — individual pizzas are boxed before the full order is
+              packed. Joe: "Pizza has to be boxed or packaged."
+
+          - id: evt-order-prepared-and-packed
+            name: "Order Prepared & Packed"
+            description: >
+              Pivotal event. Emitted when all pizzas in the order are
+              boxed and the full order is packed with delivery
+              instructions, ready for handoff to delivery.
+            emitted_on: "Order packing (KitchenOrder transition to Packed)"
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: sourceOrderId, type: UUID }
+              - { name: deliveryInstructions, type: string }
+              - { name: packedAt, type: DateTime }
+            consumed_by:
+              - bc-delivery
+            status: proposed
+            notes: >
+              Maps to ESML evt-order-prepared-and-packed (seq 13, pivotal).
+              This is the second pivotal event. Marks the transition from
+              Kitchen to Delivery. Joe: "order packed for delivery — which
+              would include the delivery instructions."
+
+        commands:
+          - id: cmd-prep-pizza
+            name: "Prep Pizza"
+            description: >
+              Begin preparing a pizza: get dough ready, apply sauce,
+              cheese, and toppings.
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+            preconditions:
+              - "PizzaPreparation must be in Queued state"
+              - "KitchenOrder must be in Received or InPreparation state"
+            emits:
+              - evt-pizza-prep-started
+            status: proposed
+            notes: >
+              Maps to ESML cmd-prep-pizza (seq 7). Initiated by the
+              Pizza Chef (act-pizza-chef). Joe: "We prep the pizza to be
+              cooked — that's the term that we use."
+
+          - id: cmd-cook-pizza
+            name: "Cook Pizza"
+            description: >
+              Place the prepped pizza into the brick oven for baking.
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+              - { name: prepId, type: UUID }
+            preconditions:
+              - "PizzaPreparation must be in Prepped state"
+            emits:
+              - evt-pizza-put-in-oven
+            status: proposed
+            notes: >
+              Maps to ESML cmd-cook-pizza (seq 9). Initiated by the
+              Pizza Chef (act-pizza-chef-oven). "You have a big spatula
+              thing and you put it in the pizza oven."
+
+          - id: cmd-pack-order
+            name: "Pack Order"
+            description: >
+              Box remaining pizzas and pack the full order with delivery
+              instructions for handoff to delivery.
+            attributes:
+              - { name: kitchenOrderId, type: UUID }
+            preconditions:
+              - "All PizzaPreparations must be in Baked or Boxed state"
+            emits:
+              - evt-order-prepared-and-packed
+            status: proposed
+            notes: >
+              Maps to ESML cmd-pack-order (seq 12). Initiated by Kitchen
+              Staff (act-kitchen-staff). This command covers both boxing
+              individual pizzas and packing the complete order.
+
+        repository:
+          id: repo-kitchen-order
+          name: "KitchenOrderRepository"
+          operations:
+            - "save"
+            - "findByKitchenOrderId"
+            - "findBySourceOrderId"
+            - "findPending"
+          status: proposed
+
+    policies:
+      - id: pol-notify-kitchen-on-order-placed
+        name: "Notify Kitchen on Order Placed"
+        description: >
+          When an order is placed in Order Management, automatically
+          create a KitchenOrder and notify the kitchen.
+        trigger_events:
+          - evt-order-placed
+        rule: >
+          Whenever Order Placed, create a KitchenOrder with the order
+          items and emit Kitchen Notified.
+        status: draft
+        notes: >
+          No explicit policy sticky on the ESML board. Inferred from
+          the transcript: "once you order placed, that's an event that
+          notifies" and "this automatically triggers this." The board
+          shows a direct flow from evt-order-placed (seq 5) to
+          evt-kitchen-notified (seq 6) with no intervening human actor.
+          Marked draft because it's inferred.
+
+    application_services:
+      - id: app-manage-kitchen-order
+        name: "Manage Kitchen Order Service"
+        description: >
+          Orchestrates kitchen order processing: creates kitchen orders
+          from Order Placed events, coordinates pizza preparation
+          tracking, and manages the packing flow.
+        use_case: "Kitchen receives and processes orders"
+        coordinates:
+          - repo-kitchen-order
+        handles:
+          - cmd-prep-pizza
+          - cmd-cook-pizza
+          - cmd-pack-order
+        status: proposed
+
+  # ---------------------------------------------------------------------------
+  # DELIVERY CONTEXT
+  # ---------------------------------------------------------------------------
+
+  - id: bc-delivery
+    name: "Delivery"
+    subdomain: sd-delivery
+    description: >
+      Manages the delivery of packed orders to customers. Owns the
+      Delivery aggregate which tracks each delivery from driver
+      notification through pickup, transit, and delivery confirmation.
+      Combines customer contact information and order reference for
+      the delivery driver.
+    responsibilities:
+      - "Notify delivery drivers when orders are packed and ready"
+      - "Track order pickup by delivery drivers"
+      - "Record delivery completion and confirmation"
+      - "Provide delivery contact info (name, phone, address, instructions)"
+    status: proposed
+    notes: >
+      Maps directly to ESML grp-delivery. The Delivery context has a
+      different view of both Customer and Order — it needs the delivery
+      contact info (name, phone, address) and delivery instructions,
+      but not the order items or price. The ESML has separate
+      agg-customer-delivery and agg-order-delivery stickies, but in
+      the DMML we merge them into a single Delivery aggregate since
+      they serve a single purpose in this context. Joe organizes drivers
+      by neighborhood and uses informal communication (WhatsApp).
+
+    ubiquitous_language:
+      - id: term-delivery
+        term: "Delivery"
+        definition: >
+          The act of transporting a packed order from Joe's Pizza to the
+          customer's address. Includes driver assignment, pickup, transit,
+          and confirmation.
+      - id: term-delivery-person
+        term: "Delivery Person"
+        definition: >
+          A driver employed by Joe's Pizza, organized by neighborhood
+          zones. Picks up packed orders and delivers them to customers.
+      - id: term-delivery-contact
+        term: "Delivery Contact"
+        definition: >
+          The customer's contact information needed for delivery: name,
+          phone number, address, and delivery instructions. A
+          delivery-specific view of the customer.
+
+    aggregates:
+      - id: agg-delivery
+        name: "Delivery"
+        description: >
+          Tracks the delivery of a packed order from the kitchen to the
+          customer. Contains delivery contact information, order
+          reference, and delivery status tracking.
+        status: proposed
+        notes: >
+          Merges ESML agg-customer-delivery and agg-order-delivery into
+          a single aggregate. In the Delivery context, customer contact
+          info and order reference serve a single purpose — enabling
+          the driver to complete the delivery. The ESML board has them
+          as separate stickies because they represent different real-world
+          concepts, but the DMML reinterprets them as a unified delivery
+          tracking unit.
+
+        root_entity:
+          id: ent-delivery
+          name: "Delivery"
+          identity:
+            attribute: deliveryId
+            type: UUID
+            generation: system
+          lifecycle:
+            - Pending
+            - DriverNotified
+            - PickedUp
+            - Delivered
+            - Confirmed
+          attributes:
+            - name: deliveryId
+              type: UUID
+              description: "Unique identifier for this delivery"
+            - name: sourceOrderId
+              type: UUID
+              description: "Reference to the originating order"
+            - name: customerName
+              type: string
+              description: "Customer name for the delivery driver"
+            - name: customerPhone
+              type: string
+              description: "Customer phone for contact during delivery"
+            - name: deliveryAddress
+              type: DeliveryAddress
+              description: "Where to deliver the order"
+            - name: deliveryInstructions
+              type: string
+              description: "Special delivery instructions"
+              nullable: true
+          status: proposed
+          notes: >
+            Lifecycle derived from ESML events: Pending (created from
+            evt-order-prepared-and-packed), DriverNotified (evt-delivery-
+            people-notified), PickedUp (evt-order-picked-up), Delivered
+            (evt-order-delivered, pivotal), Confirmed (evt-order-delivery-
+            notified). The delivery driver needs enough info to find the
+            customer and handle issues. Joe: "Martin, this is Joe, the
+            pizza guy" — they may need to call.
+
+        value_objects:
+          - id: vo-delivery-address-delivery
+            name: "DeliveryAddress"
+            attributes:
+              - name: street
+                type: string
+                description: "Street address for delivery"
+              - name: city
+                type: string
+                description: "City"
+              - name: neighborhood
+                type: string
+                description: "Neighborhood — used for driver zone assignment"
+            equality: all_attributes
+            status: draft
+            notes: >
+              Same structure as in Order Management but in the Delivery
+              context's own ubiquitous language. Neighborhood is
+              particularly important here for driver assignment — Joe
+              organizes drivers by neighborhood zones in São Paulo.
+
+        invariants:
+          - "Delivery must have a delivery address"
+          - "Delivery must have a customer name"
+          - "Order can only be picked up after driver is notified"
+          - "Delivery confirmation requires prior physical delivery"
+
+        domain_events:
+          - id: evt-delivery-people-notified
+            name: "Delivery People Notified"
+            description: >
+              Emitted when delivery drivers are notified of a packed
+              order ready for pickup.
+            emitted_on: "Driver notification (transition to DriverNotified)"
+            attributes:
+              - { name: deliveryId, type: UUID }
+              - { name: sourceOrderId, type: UUID }
+              - { name: deliveryAddress, type: DeliveryAddress }
+              - { name: notifiedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-delivery-people-notified (seq 14). Joe
+              discusses multiple notification methods: drivers come to
+              the shop and see ready orders, or "maybe we message our
+              drivers, Pinheiros, hey, we got three orders for you,
+              WhatsApp."
+
+          - id: evt-order-picked-up
+            name: "Order Picked Up"
+            description: >
+              Emitted when a delivery person picks up the order from
+              the kitchen for delivery.
+            emitted_on: "Order pickup (transition to PickedUp)"
+            attributes:
+              - { name: deliveryId, type: UUID }
+              - { name: sourceOrderId, type: UUID }
+              - { name: driverName, type: string }
+              - { name: pickedUpAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-order-picked-up (seq 15). No explicit
+              command on the board. Joe: "They'll pick up the order...
+              they have to put your name with which orders you picked
+              up." This implies a tracking action by the driver.
+
+          - id: evt-order-delivered
+            name: "Order Delivered"
+            description: >
+              Pivotal event. Emitted when the order is physically
+              delivered to the customer.
+            emitted_on: "Physical delivery (transition to Delivered)"
+            attributes:
+              - { name: deliveryId, type: UUID }
+              - { name: sourceOrderId, type: UUID }
+              - { name: deliveredAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-order-delivered (seq 16, pivotal). This
+              is the third and final pivotal event. Joe: "at the bare
+              minimum, after they picked it up, I want them to tell me
+              order delivered."
+
+          - id: evt-order-delivery-notified
+            name: "Order Delivery Notified"
+            description: >
+              Emitted when the delivery person confirms delivery in the
+              system, ensuring the record is updated for customer
+              inquiries.
+            emitted_on: "Delivery confirmation in system (transition to Confirmed)"
+            attributes:
+              - { name: deliveryId, type: UUID }
+              - { name: sourceOrderId, type: UUID }
+              - { name: confirmedAt, type: DateTime }
+            status: proposed
+            notes: >
+              Maps to ESML evt-order-delivery-notified (seq 17).
+              Triggered by cmd-notify-order-delivered. This ensures the
+              system has a record of delivery so customer inquiries can
+              be handled.
+
+        commands:
+          - id: cmd-notify-delivery-people
+            name: "Notify Delivery People"
+            description: >
+              Notify delivery drivers that an order is packed and ready
+              for pickup.
+            attributes:
+              - { name: deliveryId, type: UUID }
+            preconditions:
+              - "Delivery must be in Pending state"
+            emits:
+              - evt-delivery-people-notified
+            status: proposed
+            notes: >
+              Maps to ESML cmd-notify-delivery-people (seq 14). Initiated
+              by Kitchen Staff (act-kitchen-staff-delivery). This crosses
+              the Kitchen/Delivery boundary — the kitchen staff triggers
+              the delivery process.
+
+          - id: cmd-notify-order-delivered
+            name: "Notify Order Delivered"
+            description: >
+              Delivery person confirms in the system that the order has
+              been delivered to the customer.
+            attributes:
+              - { name: deliveryId, type: UUID }
+            preconditions:
+              - "Delivery must be in PickedUp or Delivered state"
+            emits:
+              - evt-order-delivery-notified
+            status: proposed
+            notes: >
+              Maps to ESML cmd-notify-order-delivered (seq 17). Initiated
+              by Delivery Person (act-delivery-person-notify). Joe: "I
+              want them to tell me order delivered... so that way our
+              system knows."
+
+        repository:
+          id: repo-delivery
+          name: "DeliveryRepository"
+          operations:
+            - "save"
+            - "findByDeliveryId"
+            - "findBySourceOrderId"
+            - "findPendingByNeighborhood"
+          status: proposed
+
+    policies:
+      - id: pol-create-delivery-on-order-packed
+        name: "Create Delivery on Order Packed"
+        description: >
+          When an order is prepared and packed in the Kitchen, automatically
+          create a Delivery record with the customer contact info and
+          delivery instructions.
+        trigger_events:
+          - evt-order-prepared-and-packed
+        rule: >
+          Whenever Order Prepared & Packed, create a Delivery with the
+          customer contact info and delivery address from the original
+          order.
+        status: draft
+        notes: >
+          No explicit policy sticky on the ESML board. Inferred from
+          the flow: evt-order-prepared-and-packed (seq 13) leads to
+          the Delivery zone. The delivery context needs customer info
+          that originates from Order Management, flowing through Kitchen
+          via the packed order's delivery instructions. Marked draft.
+
+    application_services:
+      - id: app-manage-delivery
+        name: "Manage Delivery Service"
+        description: >
+          Orchestrates the delivery lifecycle: creates deliveries from
+          packed orders, manages driver notifications, and records
+          delivery confirmation.
+        use_case: "Delivery of packed orders to customers"
+        coordinates:
+          - repo-delivery
+        handles:
+          - cmd-notify-delivery-people
+          - cmd-notify-order-delivered
+        status: proposed
+
+  # ---------------------------------------------------------------------------
+  # EXTERNAL: PAYMENT GATEWAY
+  # ---------------------------------------------------------------------------
+
+  - id: bc-payment-gateway
+    name: "Payment Gateway"
+    subdomain: sd-payments
+    description: >
+      External payment processing system that handles credit card and
+      PIX payments. Not owned by Joe's Pizza — fully outsourced to
+      avoid PCI compliance.
+    responsibilities:
+      - "Process credit card payments"
+      - "Process PIX payments"
+      - "Return payment confirmation or denial to Order Management"
+    status: accepted
+    notes: >
+      Maps to ESML sys-payment-system. External system with no tactical
+      detail since Joe's team doesn't own it. Joe: "the payment system
+      may have that, but we don't need it within our system — otherwise
+      we have to deal with PCI compliance."
+
+# =============================================================================
+# CONTEXT MAP
+# =============================================================================
+
+context_map:
+  description: >
+    Integration topology for Joe's Pizza Place. The flow is linear:
+    Order Management → Kitchen → Delivery, with Payment Gateway as
+    an external integration point. Each transition is marked by a
+    pivotal event (Order Placed, Order Prepared & Packed).
+  status: proposed
+  notes: >
+    Simple linear topology reflecting the pizza order lifecycle.
+    Order Management is the entry point, Kitchen is the production
+    hub, and Delivery is the last mile. The Payment Gateway is
+    consulted during ordering but doesn't participate in the
+    downstream flow. All internal integrations are event-based,
+    reflecting the asynchronous nature of the physical process
+    (kitchen can't start until order is placed, delivery can't
+    start until order is packed).
+
+  relationships:
+    - id: rel-orders-kitchen
+      name: "Order Management → Kitchen"
+      type: customer_supplier
+      upstream: bc-order-management
+      downstream: bc-kitchen
+      description: >
+        Kitchen depends on Order Management for order details.
+        When an order is placed, the Kitchen receives the item list
+        and delivery instructions needed for preparation and packing.
+      integration_style: events
+      status: proposed
+      notes: >
+        The pivotal evt-order-placed carries the order items to the
+        Kitchen context. Customer_supplier because the Kitchen's needs
+        (what items to prepare, delivery instructions for packing)
+        influence what Order Management includes in the event payload.
+        The Kitchen doesn't need customer contact info or price — only
+        the items and delivery instructions.
+
+    - id: rel-kitchen-delivery
+      name: "Kitchen → Delivery"
+      type: customer_supplier
+      upstream: bc-kitchen
+      downstream: bc-delivery
+      description: >
+        Delivery depends on Kitchen for the packed order signal.
+        When the order is prepared and packed, Delivery receives
+        notification to dispatch a driver.
+      integration_style: events
+      status: proposed
+      notes: >
+        The pivotal evt-order-prepared-and-packed triggers delivery.
+        Customer_supplier because Delivery's needs (customer contact
+        info, delivery address, instructions) influence what Kitchen
+        includes in the packed order event. The Delivery context also
+        needs data from Order Management (customer info) that flows
+        through as part of the order payload.
+
+    - id: rel-orders-payment
+      name: "Order Management ← Payment Gateway"
+      type: anticorruption_layer
+      upstream: bc-payment-gateway
+      downstream: bc-order-management
+      description: >
+        Order Management integrates with the external Payment Gateway
+        for credit card and PIX payment processing. An ACL translates
+        between the payment provider's model and the ordering domain's
+        payment concepts.
+      integration_style: api
+      status: proposed
+      notes: >
+        ACL because the external payment system has its own data model
+        (payment tokens, processor codes, settlement details) that we
+        don't want leaking into our order model. We send the amount
+        and receive a confirmation/denial — the ACL handles the
+        translation. Joe: "we redirect the user to the system... the
+        user comes back with the payment approved or denied."

@@ -1,0 +1,737 @@
+esml: "0.2.1"
+
+board:
+  title: "Joe's Pizza — Design Level Event Storming"
+  variation: design_level
+  date: "2025-09-06"
+  facilitator: "Marden Neubert"
+  participants:
+    - "Joseph Yoder"
+  notes: >
+    Two-session Event Storming for Joe's Pizza Place, an online-only
+    pizza delivery service in São Paulo. Session 1 covered big-picture
+    events, commands, actors, and external systems. Session 2 added
+    aggregates and discussed entity fields. The board is a Miro export.
+    Aggregates are positioned at the bottom of each zone (floating),
+    not inline in the canonical command→aggregate→event flow. Multiple
+    instances of the same aggregate (Order, Customer) appear across
+    zones, reflecting different bounded-context views of the same
+    concept. Three pivotal events mark phase boundaries: Order Placed,
+    Order Prepared & Packed, and Order Delivered.
+
+sources:
+  - id: src-001
+    file: "joes-pizza-es-board.png"
+    width_px: 4086
+    height_px: 978
+
+# =============================================================================
+# GROUPS
+# =============================================================================
+
+groups:
+  - id: grp-orders
+    name: "Orders"
+    origin:
+      source: src-001
+      bbox: [50, 30, 1380, 900]
+      color_observed: "#C0C0C0"
+      text_confidence: 0.95
+
+  - id: grp-kitchen
+    name: "Kitchen"
+    origin:
+      source: src-001
+      bbox: [1350, 30, 1550, 870]
+      color_observed: "#C0C0C0"
+      text_confidence: 0.95
+
+  - id: grp-delivery
+    name: "Delivery"
+    origin:
+      source: src-001
+      bbox: [2850, 30, 1200, 900]
+      color_observed: "#C0C0C0"
+      text_confidence: 0.95
+
+# =============================================================================
+# ACTORS
+# =============================================================================
+
+actors:
+  - id: act-customer-top
+    name: "Customer"
+    group: grp-orders
+    notes: >
+      Small yellow sticky with person icon at the top of the Orders zone,
+      near the Select Pizza Type command. One of four Customer actor
+      stickies in this zone — the same human role (online pizza buyer)
+      placed near each command it initiates.
+    origin:
+      source: src-001
+      bbox: [450, 40, 120, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.95
+
+  - id: act-customer-left
+    name: "Customer"
+    group: grp-orders
+    notes: >
+      Second Customer sticky, placed to the left near Request Order
+      command and Order Requested event.
+    origin:
+      source: src-001
+      bbox: [150, 255, 120, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.95
+
+  - id: act-customer-delivery-info
+    name: "Customer"
+    group: grp-orders
+    notes: >
+      Third Customer sticky, placed near Enter Delivery Information
+      command at the bottom-left of the Orders zone.
+    origin:
+      source: src-001
+      bbox: [230, 575, 120, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.95
+
+  - id: act-customer-payment
+    name: "Customer"
+    group: grp-orders
+    notes: >
+      Fourth Customer sticky, placed near Enter Payment Information
+      command at the bottom-right of the Orders zone.
+    origin:
+      source: src-001
+      bbox: [655, 550, 120, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.94
+
+  - id: act-pizza-chef
+    name: "Pizza Chef"
+    group: grp-kitchen
+    notes: >
+      Small yellow sticky with person icon near the Prep Pizza command.
+      The same Pizza Chef actor appears three times in the Kitchen zone
+      (near Prep Pizza, near Pizza Prep Finished, and near Cook Pizza /
+      Pizza Baked), indicating the chef's involvement across kitchen
+      steps. This entry represents the primary instance.
+    origin:
+      source: src-001
+      bbox: [1575, 75, 120, 65]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.93
+
+  - id: act-pizza-chef-mid
+    name: "Pizza Chef"
+    group: grp-kitchen
+    notes: >
+      Second Pizza Chef sticky, placed in the middle of the event
+      row near Pizza Prep Finished.
+    origin:
+      source: src-001
+      bbox: [1895, 200, 130, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.92
+
+  - id: act-pizza-chef-oven
+    name: "Pizza Chef"
+    group: grp-kitchen
+    notes: >
+      Third Pizza Chef sticky, placed near Pizza Baked and Pizza Pulled
+      out of Oven events.
+    origin:
+      source: src-001
+      bbox: [2340, 185, 130, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.92
+
+  - id: act-kitchen-staff
+    name: "Kitchen Staff"
+    group: grp-kitchen
+    notes: >
+      Kitchen Staff actor in the Kitchen zone, near Pack Order command
+      and Pizza Boxed event. The transcript says the kitchen staff
+      (or an assistant) handles boxing and packing.
+    origin:
+      source: src-001
+      bbox: [2755, 150, 120, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.93
+
+  - id: act-kitchen-staff-delivery
+    name: "Kitchen Staff"
+    group: grp-delivery
+    notes: >
+      Duplicate Kitchen Staff sticky placed in the Delivery zone, near
+      the Notify Delivery People command. Represents the kitchen staff's
+      role in triggering the delivery handoff.
+    origin:
+      source: src-001
+      bbox: [2960, 330, 120, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.93
+
+  - id: act-delivery-person
+    name: "Delivery Person"
+    group: grp-delivery
+    notes: >
+      Delivery Person actor near Order Picked Up and Order Delivered
+      events. A second Delivery Person sticky appears lower-right near
+      Notify Order Delivered, indicating the same role at the end of
+      the delivery flow.
+    origin:
+      source: src-001
+      bbox: [3335, 365, 130, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.93
+
+  - id: act-delivery-person-notify
+    name: "Delivery Person"
+    group: grp-delivery
+    notes: >
+      Second Delivery Person sticky, placed lower-right near the
+      Notify Order Delivered command.
+    origin:
+      source: src-001
+      bbox: [3625, 445, 130, 70]
+      color_observed: "#FFF8DC"
+      text_confidence: 0.92
+
+# =============================================================================
+# EVENTS
+# =============================================================================
+
+events:
+  # --- Orders zone ---
+  - id: evt-order-requested
+    name: "Order Requested"
+    sequence: 1
+    group: grp-orders
+    origin:
+      source: src-001
+      bbox: [270, 268, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.95
+
+  - id: evt-type-of-pizzas-selected
+    name: "Type of Pizzas Selected"
+    sequence: 2
+    group: grp-orders
+    notes: >
+      Transcript discusses this and Delivery Information Entered as
+      interchangeable in order — "they can happen in either order."
+      Both at similar x-positions on the board.
+    origin:
+      source: src-001
+      bbox: [490, 200, 155, 110]
+      color_observed: "#FF9933"
+      text_confidence: 0.93
+
+  - id: evt-delivery-information-entered
+    name: "Delivery Information Entered"
+    sequence: 2
+    group: grp-orders
+    notes: >
+      Concurrent with evt-type-of-pizzas-selected (vertically stacked,
+      similar x-position). Joe initially used "Delivery Address Entered"
+      then broadened to include name and delivery instructions.
+    origin:
+      source: src-001
+      bbox: [475, 315, 170, 110]
+      color_observed: "#FF9933"
+      text_confidence: 0.93
+
+  - id: evt-payment-information-entered
+    name: "Payment Information Entered"
+    sequence: 3
+    group: grp-orders
+    origin:
+      source: src-001
+      bbox: [680, 260, 160, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.92
+
+  - id: evt-payment-completed
+    name: "Payment Completed"
+    sequence: 4
+    group: grp-orders
+    notes: >
+      Produced by interaction with the external Payment System. The
+      transcript states "if the payment is not completed, you're not
+      going to place any order."
+    origin:
+      source: src-001
+      bbox: [840, 250, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.94
+
+  - id: evt-order-placed
+    name: "Order Placed"
+    sequence: 5
+    pivotal: true
+    group: grp-orders
+    notes: >
+      First pivotal event. Marks the transition from ordering to
+      kitchen preparation. The transcript identifies this as the
+      boundary between the Orders and Kitchen phases.
+    origin:
+      source: src-001
+      bbox: [985, 240, 130, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.96
+
+  # --- Kitchen zone ---
+  - id: evt-kitchen-notified
+    name: "Kitchen Notified"
+    sequence: 6
+    group: grp-kitchen
+    notes: >
+      Triggered automatically by Order Placed. The transcript says
+      "once you order placed, that's an event that notifies" and
+      "this automatically triggers this."
+    origin:
+      source: src-001
+      bbox: [1420, 258, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.94
+
+  - id: evt-pizza-prep-started
+    name: "Pizza Prep Started"
+    sequence: 7
+    group: grp-kitchen
+    notes: >
+      Added during the command discussion. "You started and you
+      finished — I think it's okay."
+    origin:
+      source: src-001
+      bbox: [1580, 258, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.93
+
+  - id: evt-pizza-prep-finished
+    name: "Pizza Prep Finished"
+    sequence: 8
+    group: grp-kitchen
+    notes: >
+      Joe's terminology: "We prep the pizza to be cooked. That's the
+      term that we use." Prep includes getting the dough, sauce,
+      cheese, and toppings placed.
+    origin:
+      source: src-001
+      bbox: [1750, 258, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.93
+
+  - id: evt-pizza-put-in-oven
+    name: "Pizza Put in Oven"
+    sequence: 9
+    group: grp-kitchen
+    notes: >
+      Discussed as either the last step of prep or a separate event.
+      Joe: "after you prep it, usually you slide it into the oven."
+      Kept as a separate event on the board.
+    origin:
+      source: src-001
+      bbox: [1920, 258, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.92
+
+  - id: evt-pizza-baked
+    name: "Pizza Baked"
+    sequence: 10
+    group: grp-kitchen
+    notes: >
+      Joe: "Then you bake it. So first you prep it and then you bake
+      it." Uses a classic brick oven; timing is part experience, part
+      timer.
+    origin:
+      source: src-001
+      bbox: [2155, 258, 140, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.94
+
+  - id: evt-pizza-pulled-out-of-oven
+    name: "Pizza Pulled out of Oven"
+    sequence: 11
+    group: grp-kitchen
+    notes: >
+      Added during the command/actor discussion. Marden: "pizza pulled
+      out of the oven looks like an event because it does really."
+    origin:
+      source: src-001
+      bbox: [2335, 258, 165, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.90
+
+  - id: evt-pizza-boxed
+    name: "Pizza Boxed"
+    sequence: 12
+    group: grp-kitchen
+    notes: >
+      Individual pizza boxed. Joe: "Pizza has to be boxed or packaged."
+      This is per-pizza, before the full order is packed.
+    origin:
+      source: src-001
+      bbox: [2560, 258, 140, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.92
+
+  - id: evt-order-prepared-and-packed
+    name: "Order Prepared & Packed"
+    sequence: 13
+    pivotal: true
+    group: grp-kitchen
+    notes: >
+      Second pivotal event. The full order (potentially multiple
+      pizzas) is packed with delivery instructions. Joe: "order packed
+      for delivery — which would include the delivery instructions."
+      Positioned at the Kitchen/Delivery zone boundary.
+    origin:
+      source: src-001
+      bbox: [2720, 155, 165, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.91
+
+  # --- Delivery zone ---
+  - id: evt-delivery-people-notified
+    name: "Delivery People Notified"
+    sequence: 14
+    group: grp-delivery
+    notes: >
+      Joe discusses multiple notification approaches: "they would come
+      and they would see these orders ready to go" or "maybe we message
+      our drivers, Pinheiros, hey, we got three orders for you,
+      WhatsApp."
+    origin:
+      source: src-001
+      bbox: [3110, 160, 160, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.91
+
+  - id: evt-order-picked-up
+    name: "Order Picked Up"
+    sequence: 15
+    group: grp-delivery
+    notes: >
+      Delivery person takes one or more orders. Joe: "They'll pick up
+      the order... they have to put your name with which orders you
+      picked up."
+    origin:
+      source: src-001
+      bbox: [3300, 160, 150, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.93
+
+  - id: evt-order-delivered
+    name: "Order Delivered"
+    sequence: 16
+    pivotal: true
+    group: grp-delivery
+    notes: >
+      Third pivotal event. Joe: "at the bare minimum, after they
+      picked it up, I want them to tell me order delivered." Important
+      for customer follow-up if there are complaints.
+    origin:
+      source: src-001
+      bbox: [3480, 160, 150, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.94
+
+  - id: evt-order-delivery-notified
+    name: "Order Delivery Notified"
+    sequence: 17
+    group: grp-delivery
+    notes: >
+      Explicit notification event after delivery, added during the
+      command discussion. Ensures the system records delivery
+      confirmation so customer inquiries can be handled.
+    origin:
+      source: src-001
+      bbox: [3690, 160, 155, 100]
+      color_observed: "#FF9933"
+      text_confidence: 0.88
+
+# =============================================================================
+# COMMANDS
+# =============================================================================
+
+commands:
+  # --- Orders zone ---
+  - id: cmd-request-order
+    name: "Request Order"
+    sequence: 1
+    initiated_by:
+      actor: act-customer-left
+    emits:
+      - evt-order-requested
+    group: grp-orders
+    notes: >
+      Joe: "The very first thing that happens is you either come into
+      the store or you go online and you request — order requested."
+      No aggregate target shown inline (aggregates are floating at
+      bottom of zone).
+    origin:
+      source: src-001
+      bbox: [230, 160, 165, 105]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.93
+
+  - id: cmd-select-pizza-type
+    name: "Select Pizza Type"
+    sequence: 2
+    initiated_by:
+      actor: act-customer-top
+    emits:
+      - evt-type-of-pizzas-selected
+    group: grp-orders
+    notes: >
+      Joe: "They're going to start entering in either pizza type...
+      one or more pizza with the type or things they want." Could
+      involve selection from predefined menu options.
+    origin:
+      source: src-001
+      bbox: [380, 90, 155, 105]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.93
+
+  - id: cmd-enter-delivery-information
+    name: "Enter Delivery Information"
+    sequence: 2
+    initiated_by:
+      actor: act-customer-delivery-info
+    emits:
+      - evt-delivery-information-entered
+    group: grp-orders
+    notes: >
+      Joe: "We need the customer's name and delivery address and
+      phone number." Also includes delivery instructions ("leave it
+      on the porch or ring this code").
+    origin:
+      source: src-001
+      bbox: [385, 440, 165, 120]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.91
+
+  - id: cmd-enter-payment-information
+    name: "Enter Payment Information"
+    sequence: 3
+    initiated_by:
+      actor: act-customer-payment
+    emits:
+      - evt-payment-information-entered
+    group: grp-orders
+    notes: >
+      Joe: "Credit card machine, which we can enter in or whatever.
+      Or if they want to pay through PIX, we'll take that too." The
+      payment is then processed by the external Payment System.
+    origin:
+      source: src-001
+      bbox: [575, 425, 165, 120]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.91
+
+  # --- Kitchen zone ---
+  - id: cmd-prep-pizza
+    name: "Prep Pizza"
+    sequence: 7
+    initiated_by:
+      actor: act-pizza-chef
+    emits:
+      - evt-pizza-prep-started
+    group: grp-kitchen
+    notes: >
+      Joe: "We prep the pizza to be cooked — that's the term that we
+      use." Includes getting dough ready, sauce, cheese, toppings.
+    origin:
+      source: src-001
+      bbox: [1620, 160, 150, 95]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.93
+
+  - id: cmd-cook-pizza
+    name: "Cook Pizza"
+    sequence: 9
+    initiated_by:
+      actor: act-pizza-chef-oven
+    emits:
+      - evt-pizza-put-in-oven
+    group: grp-kitchen
+    notes: >
+      Putting the prepped pizza into the brick oven. "You have a big
+      spatula thing and you put it in the pizza oven."
+    origin:
+      source: src-001
+      bbox: [1830, 80, 155, 95]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.92
+
+  - id: cmd-pack-order
+    name: "Pack Order"
+    sequence: 12
+    initiated_by:
+      actor: act-kitchen-staff
+    emits:
+      - evt-order-prepared-and-packed
+    group: grp-kitchen
+    notes: >
+      Kitchen staff boxes individual pizzas and packs the full order
+      with delivery instructions. "Order packed for delivery — which
+      would include the delivery instructions."
+    origin:
+      source: src-001
+      bbox: [2795, 310, 140, 100]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.92
+
+  # --- Delivery zone ---
+  - id: cmd-notify-delivery-people
+    name: "Notify Delivery People"
+    sequence: 14
+    initiated_by:
+      actor: act-kitchen-staff-delivery
+    emits:
+      - evt-delivery-people-notified
+    group: grp-delivery
+    notes: >
+      Kitchen staff triggers notification to delivery drivers.
+      Marden: "whenever there is a command that is triggered by an
+      event, we usually model that command explicitly here."
+    origin:
+      source: src-001
+      bbox: [3010, 355, 145, 105]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.91
+
+  - id: cmd-notify-order-delivered
+    name: "Notify Order Delivered"
+    sequence: 17
+    initiated_by:
+      actor: act-delivery-person-notify
+    emits:
+      - evt-order-delivery-notified
+    group: grp-delivery
+    notes: >
+      Delivery person confirms delivery in the system. Joe: "I want
+      them to tell me order delivered... so that way our system knows."
+    origin:
+      source: src-001
+      bbox: [3770, 345, 145, 110]
+      color_observed: "#4FC3F7"
+      text_confidence: 0.90
+
+# =============================================================================
+# AGGREGATES
+# =============================================================================
+
+aggregates:
+  - id: agg-customer-orders
+    name: "Customer"
+    group: grp-orders
+    notes: >
+      Large yellow sticky at the bottom of the Orders zone. Floating
+      aggregate — not positioned inline between commands and events.
+      Session 2 identified fields: name, phone number, address.
+      Represents the customer placing the online order.
+    origin:
+      source: src-001
+      bbox: [380, 680, 210, 120]
+      color_observed: "#FFD700"
+      text_confidence: 0.96
+
+  - id: agg-order-orders
+    name: "Order"
+    group: grp-orders
+    notes: >
+      Large yellow sticky at the bottom of the Orders zone, next to
+      Customer. Floating aggregate. Session 2 identified fields:
+      items (item + quantity), type, topping, price, delivery
+      instructions. This aggregate appears in all three zones.
+    origin:
+      source: src-001
+      bbox: [640, 680, 210, 120]
+      color_observed: "#FFD700"
+      text_confidence: 0.96
+
+  - id: agg-order-kitchen
+    name: "Order"
+    group: grp-kitchen
+    notes: >
+      Duplicate Order aggregate in the Kitchen zone. The transcript
+      clarifies: "the kitchen mostly needs early on just the order"
+      and "they don't care who it's for and we don't care where it
+      goes — we just need to know what kind of order."
+    origin:
+      source: src-001
+      bbox: [1990, 510, 210, 120]
+      color_observed: "#FFD700"
+      text_confidence: 0.95
+
+  - id: agg-customer-delivery
+    name: "Customer"
+    group: grp-delivery
+    notes: >
+      Duplicate Customer aggregate in the Delivery zone. The delivery
+      context needs customer name, address, phone number, and delivery
+      instructions — a different view of the Customer from Orders.
+    origin:
+      source: src-001
+      bbox: [3190, 540, 210, 120]
+      color_observed: "#FFD700"
+      text_confidence: 0.95
+
+  - id: agg-order-delivery
+    name: "Order"
+    group: grp-delivery
+    notes: >
+      Duplicate Order aggregate in the Delivery zone. Joe discussed
+      whether delivery needs order details: "you might want some of
+      the order information for the delivery person, in case the
+      customer challenges them." Kept for confirmation purposes.
+    origin:
+      source: src-001
+      bbox: [3450, 540, 210, 120]
+      color_observed: "#FFD700"
+      text_confidence: 0.95
+
+# =============================================================================
+# EXTERNAL SYSTEMS
+# =============================================================================
+
+external_systems:
+  - id: sys-payment-system
+    name: "Payment System"
+    group: grp-orders
+    notes: >
+      Wide pink sticky in the upper-right of the Orders zone. Joe:
+      "The payment system may have that, but we don't need it within
+      our system — otherwise we have to deal with PCI compliance."
+      Processes credit card and PIX payments.
+    origin:
+      source: src-001
+      bbox: [745, 80, 205, 110]
+      color_observed: "#F8BBD0"
+      text_confidence: 0.95
+
+# =============================================================================
+# CONFIDENCE
+# =============================================================================
+
+confidence_defaults:
+  overall_text_extraction: 0.90
+  overall_classification: 0.88
+  notes: >
+    Real Miro board photograph (not a synthetic SVG). Text is generally
+    legible but some stickies are slightly rotated and overlapping.
+    The organic layout means elements are not aligned to a strict grid.
+    Aggregates are positioned at the bottom of zones (floating) rather
+    than inline in the canonical design-level command→aggregate→event
+    flow, which reduces classification confidence slightly for
+    aggregate identification. Actor stickies are duplicated liberally
+    (4 Customer stickies in Orders, 3 Pizza Chef stickies in Kitchen)
+    to show proximity to the commands they initiate. No policies,
+    read models, hotspots, or unresolved items are visible on the
+    board, though the transcripts discuss policies (delivery radius,
+    topping constraints) that were deferred to future sessions.

@@ -1,0 +1,613 @@
+So, hey Joe, how are you doing? Are you ready for starting a brainstorm with your pizza shop?
+
+Oh yeah, I'm excited about getting my pizza shop opened here and building a kind of a system where we can start. You know, I love pizza and I learned how to make pizza as a young guy and I'm looking forward to brainstorming a system where we can actually take and place orders and deliver pizzas as part of Joe's Pizza Place. Thank you Marden for helping me.
+
+That's great. As a product manager, I'm here to help you and in this session we are brainstorming a bit what you need for a pizza shop to go live. We're gonna use a modeling technique called event storming, which is nice. It's pretty flexible, so I'll try to go along with it. If you need any clarification, just let me know. But it starts pretty straightforward. 
+
+What we're gonna do, we're gonna pick those orange stickies that you have here, called events, and we're gonna start thinking about all the relevant events that happen during your process of buying ingredients for your pizza, building your pizza or cooking your pizza, receiving orders, receiving payments, delivering your orders, tracking orders, anything you need a system for, we can think about it here. You can start with the one that is the most relevant for you. Let's just plot a timeline here. 
+
+You don't have to even think about order. Just think about all the relevant things that happen. Each one is a domain event.
+
+We're gonna just start brainstorming. I'm gonna help you here. I look forward to it. 
+
+Thank you, Martin. I look forward to our session here and what we do. For my pizza shop, one of the first things, obviously I think about pizzas, but before you have a pizza, I want to make pizzas. 
+
+I have these lovely Italian style pizzas that I want to make for people, but before I can make a pizza, I have to figure out, I have to have an order from some customer. Somebody has to make a request for a pizza. I have to find out from some customer they have to request an order, so then I can think about what type of pizza that they want before I start preparing. 
+
+	Obviously, I have a lot of things about how I prepare the pizza and the different types of options, but I think about an order requested. Mostly think of pizzas, but we'll have other things like garlic bread or maybe salads or lasagnas, but mostly I'm thinking of pizza right now. Let's take a slice of your business and just think about pizza at the moment. 
+
+	I would say order placed. Does it make sense? We're using the names of the events will be in the past tense, so maybe order placed may represent that. That sounds good. 
+
+	Some customer has placed an order, so order placed and it's being done by somebody, it's a customer. I don't know whether they call in or did it on an online system, whatever, but there is an order placed. You're right, that's one of the main events. 
+
+	We can either place the name of the person here, but I suggest at this moment we just name the events. Okay, so order placed is definitely one of them. Okay, and then we can think about things that happened before and after that event. 
+
+	That's a very important event, but we can explore things happening either before or after it or any order you like. Well, while they're placing the order, they have to really think what kind of pizza do they want, what crust, what toppings. So there are these different types of things that we need from the customer about the type of pizza. 
+
+	So the order placed, so this might be happening during the process of placing. Before the order is placed, there are these events about entering in the, okay, do you want a big pizza? Do you want a thin crust or thick crust? Or do you want pepperoni? Do you want half and half or cheese? So we need to somehow think of what type of pizza and what the toppings are on the pizza. Okay, so what I can do here is place another yellow, sorry, orange sticky to the left of order placed and name it. 
+
+	So would you call it like options selected or how do you call the name of all those configurations? What type of pizza that you want. So you're entering in, so the pizza type that you want, the type of pizza with the toppings. I guess you could split it into two, but I was thinking usually what, so I'm using, my customers are saying, Joe, I would like a large pepperoni pizza with thin crust. 
+
+So they're telling me what type of pizza they want. They're entering the type of pizza. Okay. 
+
+We can just say type of pizza. Maybe entered or selected. It could be selected, I guess, or entered or something like that. 
+
+They're selecting all the things they want. So you could say selected. Okay. 
+
+Yes. Okay. Since you have a pretty fine set of types of pizza, we could say that we could also later expand type of pizza into more details like crust size, topping, whatever. 
+
+Yes. Ultimately that would probably be part of the, so this is the main event. So as you're doing, as you're selecting the pizza, you would, cause you might want half and half as well. 
+
+So, so, so yeah, so you're exactly right. So, but this is really what's happening at the main event. So this is good. 
+
+We can expand that event. You have type of pizza entered and then, and then I guess another thing is if we're doing delivery, if they're, if they're in house, fine, we're going to take it to, we'll have the table number is the address. Well, where, where, where do we get, take the pizza to the table? Could be the table number, but otherwise we might also deliver it to their house. 
+
+So we might need their address. So the address could be the table number if they're in house, otherwise it would be, you know. Okay. 
+
+So something that happens before, I will drive or something like that. I don't know. Is something like delivery address, I don't know, informed or something like this. 
+
+Would it make sense or do you need something? Informed kind of sounds weird. I would say entered or whatever, or delivery address. Yeah. 
+
+Informed. It just sounds, the term sounds, yeah. At least from English, when I'm thinking about it from English, it's not incorrect, but it sounds awkward. 
+
+Yeah. Or entered or something. So yeah. 
+
+You type a pizza delivery address entered. And you know what, by the way, I don't care about the order of those events ahead of time. Absolutely. 
+
+Absolutely. We can, if you don't care about them, we can just put it like this because they can happen in either order. Yeah. 
+
+They really could. They really could. Cause you could even go back and forth and add another pizza or change your pizza after you entered, before you actually place the order.
+
+You'll have that type of thing going on. But there are other things that may happen before the order is placed, right? When you get the payment. Well I think the first thing that happens is you either come into the store or you go online and you request, order requested. 
+
+That's the very first thing that happens. You're requesting an order. Okay. 
+
+So that's the very first event. So you're coming in or you're going online or you're calling up and you're requesting an order. Even if we call up, we could still use a system for entering it in from the phone, but an order is being requested. 
+
+Okay. So somebody has requested an order. Now we have to get the information.
+
+And this is the main type of information. And it could be that another thing that could happen after, and this has to happen. This might happen after in one, I guess you told me not to worry about orders. 
+
+So I won't, I'll just brainstorm the event is we have to pay for the order somehow. Makes sense. Makes sense. 
+
+So then either that happens as part of placing after you place or during the placing of the order. Yeah. Maybe it's because, but you can't do it until after you've done all the other stuff you've requested, you've entered in. 
+
+You may have a delivery charge because you're so far out. We added a little extra. Okay. 
+
+If you're in house, maybe the delivery charge is nothing, or maybe within a certain radius, it's nothing, but we will deliver way out in the West part of Sao Paulo, but you got to pay extra for that. Okay. Maybe for our first iteration here, we may pick just online delivery model. 
+
+Okay. So we can... Okay. Sure. 
+
+Thank you. Let's keep it focused. If we're thinking about that, we definitely need the delivery address.
+
+Payment should be the last thing that happens or is part of ordered placed. Yeah. Placing the order event should somehow get the payment as part of that. 
+
+Okay. Okay. Maybe this represents that. 
+
+It's just like one thing must happen for the other to happen. So if the payment is not completed, you're not going to price any order, right? Right. That's right. 
+
+Maybe that's And you cannot make payment until you selected all your pizzas and you have the delivery address. Okay. And an order has been requested. 
+
+So yeah, I kind of like the sequence that you're showing here. Okay. If you're thinking of time over trying to put... So this is it for ordering pizzas, but once an order has been placed, so once an order is placed, then we go into the queue and send it to the chef. 
+
+Oh, that's awesome. So then we have to somehow prepare the pizza. So there is another event is after you've placed orders, we have to prepare the pizza. 
+
+Okay. So the pizza is somehow being prepared or we're baking it. So before you bake it, the first thing you do is you prep it. 
+
+So I've actually, believe it or not, I've had the dough where you flip it up and you're flipping it. I don't know if you've seen chefs that do that with the dough for pizza dough. It's awesome. 
+
+I've actually got good at doing it. I got all that from the Italian person I worked with and then making it, how we rolled it out. We made our own dough with a great big machine for stirring it up and putting the right amount of ingredients in. 
+
+Okay. But then you have that and we took these pre-baked type things and then we put the sauce on and then we have to put the... Based upon the order details that we have from the order placed, we figure out what kind of sauces do we use? What kind of cheeses and what ingredients do we put? Okay. And how do we place it on the pizza? So that's prepping. 
+
+So first we got to prep the order, getting it ready. And then after it's prepped, then you have a big spatula thing and you put it in the pizza oven. Okay. 
+
+And then you bake it. So first you prep it and then you bake it. Okay. 
+
+So I created an event called Preparation Started. I don't know if it makes sense for you, which means... Well, I'm thinking... Well, you could say start, but I'm thinking before you cook it, you have to... Preparation has to be completed. Pizza is prepared. 
+
+Okay. We can use either... Pizza prepared or... You see what I'm saying about preparation. Pizza is not done, but you have to get it ready. 
+
+You have to get the basis of it ready to cook. All right. I was thinking about an event that would be just after the order is placed, but you can definitely start with the event that is at the end of the preparation. 
+
+So you can say either pizza prepared or preparation finished, which is kind of... That could be okay too. Pizza prepared is okay as well. Somehow we're thinking about preparing... The pizza is being prepared. 
+
+I know that kind of sounds weird, but sometimes you have to get ready to cook it. You have to get the base and get all the ingredients on it. So if you use the word prep instead of preparation, that's fine too. 
+
+So we can say prep finished or prep completed. Prep pizza... Yeah. For it to be cooked. 
+
+So this is before cooked. Yeah. Okay. 
+
+So we can say... We can make a convention that preparation or prep is the pre-cooking step. If that's the word you use. Yeah. 
+
+So yeah. Whatever is your language, whatever your kitchen staff uses here. Oh, we say prepare the pizza to be cooked. 
+
+We used to have pre-bakes, so they would already pre-bake partially. So they're a little bit firm for the crust. You put the crust down, then you put the sauce on, and then we prep it. 
+
+So we prep the pizza to be cooked. That's the term that we use. We prep the pizza to be cooked, and then we actually bake it or cook it. 
+
+Okay. That's a past tense is cooking. You cooked. 
+
+Okay. So we could say... You should say pizza prep finished. We could say pizza or just... Okay. 
+
+Let's say pizza prep finished, and then I could say pizza cooked. Right? Yes. Okay. 
+
+Yeah. So pizza cooked or baked or however you want to say it. Yeah. 
+
+So you're in an oven, so I guess you could say baked if you're baking the pizza or you're putting it in a hot oven. It's just one of those classic big really hot ovens, similar like you see in Brazil with these Spiderman. Okay. 
+
+Okay. So what happens between finishing the prep of the pizza and the pizza being baked? Is there anything that we need to capture here or would be like... Well, I mean, the step is to put it in the oven. Okay.
+
+So an event that happens after it's prepared is put in oven. Right. Okay. 
+
+Okay. We can say that. So it has been put in the oven. 
+
+If you were going to ask me an extra event, that would be the... Because obviously you can't bake it until it's in the oven. Yeah. Absolutely. 
+
+We can't decide which of those... You could be preparing quite a few and then you put a few in the oven at the same time. Okay. But after you prep it, usually you slide it into the oven. 
+
+Yeah. Just as soon as it's prepped. Okay. 
+
+That might be one of the last things that you could either say that's the last step of preparing, you got it all done, or you could add an extra event depending on... But because it's just a simple thing of sliding it. Okay. So it could be the last step of preparing.
+
+You're preparing it and part of that is putting it in the oven. Okay. Okay. 
+
+Perfect. Perfect. We can decide which of those events will become a system later. 
+
+Maybe you want to automate this using robots, AI, it's on the hype, but you don't need to go into all that detail if you don't like. So after the pizza is baked... Well then it has to be... Since we're only going to do online ordering and delivering, like you said. Yeah. 
+
+Then I mean if it was going to be in-house, we might put it on a platter and walk it out to the table, but here we're going to have to package it and label it for the delivery people. So we're going to have to put it in a box, close the box, and then put the instructions because it may have... Because part of the address entered could have information in delivery instructions as part of that too. So it might have the address with delivery instructions. 
+
+So we have to package it. Pizza has to be boxed or packaged, whatever you want to... However we call it. We box it or pack it.
+
+Sometimes in my store here, we call it boxed, but... Okay. Let's use your terminology. We also have pizza packed and then labeled for delivery. 
+
+Okay. Pizza packed and labeled for delivery is really what's going on. So I would almost kind of put that together.
+
+Of course, if you have a more complicated order, it could be you have more pizzas you're waiting for. So maybe the pizza is boxed independently or like you say, and then we take all the... If they say they have four pizzas and a salad, then we have to get them all together and then put them into the delivery container with the label. So maybe that's after it's baked and boxed. 
+
+So then you create the delivery package, whatever you call it, and then label it. Okay. We can say... And that's the last thing really, because now it's ready for the delivery person to pick up. 
+
+So the pizza has been packed and it's been labeled and... We can say pizza box packed for delivery and labeled. We could use different events to say... Well, we could say, rather than pizza box, because at this point we could have multiple pizzas. So I would almost say order is packed for delivery. 
+
+Order. Makes sense. Yes. 
+
+Because the order could have salad and pizza and whatever, as we think about. But it could be a side of garlic bread, or maybe they want some extra hot peppers to go on it. Maybe that's part of what they've added to the order. 
+
+Or order packed for delivery. Which, yeah. Order packed for delivery. 
+
+Which would include the delivery instructions, right? Yeah. So we can assume that the pack... Order packed is probably good. That could be good. 
+
+Yeah. We can put a note here saying that the packaging includes the delivery data. So we can use this another sticky here. 
+
+Yeah. I mean, we are going to have data with all these pieces, I guess. Different types of things that we need to capture before all this stuff. 
+
+I guess those will be what you get to later when you look at the aggregates or other things that were part of this. Yeah, exactly. Okay. 
+
+Okay. So what happens now? Well, after the order is placed, then somebody has to pick it up. The delivery person will come and pick up a bunch of orders. 
+
+So after an order is placed, and after it's been... I'm sorry, but when it's been packed, after it's been packed, then you're going to have a delivery. So after it's been packed, then it's available for a delivery person to pick up. But they might pick up one or more of these orders that's been packed.
+
+Okay. And then they'll prioritize to deliver them. Okay. 
+
+How do you notify the delivery people that they have to pick an order? I think that once it's packed, it'll set a queue of these types of orders that are available to be picked up, right? Okay. I don't know. It could be that we have, depending on the address it's going to, we'll have different delivery people.
+
+So if it's going in the south side, you know, if it's going in the Pinheiros neighborhood, we have a couple of delivery persons for that that are constantly coming and getting the ones for Pinheiros. Okay. Whereas if it's going in the town BB area, then we have a different crew.
+
+So those orders will somehow... When they're actually packed and with that extra information, the delivery people will be notified that there are orders available. Okay. So I just added delivery people notified here. 
+
+Maybe it makes sense. Okay. That's cool. 
+
+Yeah. Delivery people are notified. And then ultimately they'll pick up the order. 
+
+So order picked up is right here. And then they have to look at the address of the orders they have and prioritize the address of the customer. Okay. 
+
+And then they'll be driving and delivering the order to the customer. Okay. Is this within the scope of your system or do you trust the delivery people to select the best? Well, we want to know when the order has been delivered, but we want the pizza guy to somehow notify once it's been delivered. 
+
+Okay. Okay. I want them to tell me after they picked it up. 
+
+I So they've arrived at the customer. Maybe there's an event for that or not, but I, at least at the bare minimum, after they picked it up, I want them to tell me order delivered. Okay. 
+
+So we have that way. Our system knows that if the customer calls we have, and, you know, and they've notified us that if it hasn't been delivered and we get a call, then we can follow up with that person. Perfect. 
+
+So we have an important person to know. Yeah. So it's probably something that's simple as a minimum. 
+
+I mean, we could have tracking or whatever, but we won't worry about that. But I do want to know when it's delivered. I think that's, that's key here. 
+
+Okay. So we have order delivered as an event here. Yeah. 
+
+Otherwise I have customers calling and saying, no, it never got delivered. But if I have some kind of notification. Yeah. 
+
+Yeah. So is this the final event for a pizza delivery process? Anything else? I think at the bare minimum, it's something this simple. I mean, there could be other things that go on that we don't worry about. 
+
+Maybe they tip the driver, but that's out of our scope. Okay. And then we could think of ultimately, if these delivery people are working for us and maybe I hire a delivery crew working for me, I might even try to prioritize the route, but that'd be another whole system in the future. 
+
+But right now the minimum, maybe I'll just do independent drivers and say, here, you figure out on your own, the best route you have. Here's the, here's five orders in Pinheiro's neighborhood. Please deliver them as soon as possible. 
+
+Yeah. Prioritize your route to make that as quick as possible. But in the future, we might even think of having a system that helps them pick the best route and everything to optimize. 
+
+But yeah, right now that's the minimum. Excellent. I think looking back at the event, Joe, we see a natural order here. 
+
+So everything starts with order requested. Then the customer has to select the pizza type, which can be lots of things. We can... Yeah. 
+
+By the way, can you put pizzas plural, types of pizzas? Because it could be that they select multiple pizzas. I guess we can make that. Or I guess I can edit on this too, right? This is supposed to be me entering in cards too, right? Yeah. 
+
+So I could go in here and put types of pizzas. Yeah, of course. Yeah. 
+
+It's a collaborative event here. So then we have pizza completed, order placed. And then don't you think that before pizza prep finished and after order placed, there's something like, I don't know, your kitchen crew notified or something like this? I thought that order placed does that.
+
+But you can explore the events as much as you can here. So if order placed... Yeah. So I was thinking order placed would somehow notify, but you're right. 
+
+It could trigger a new event. So you can add that. Yeah. 
+
+Go ahead. Yeah. Put that in there. 
+
+And then here I'm going to say payment information entered. Okay, cool. Before you complete it, it's got to maybe credit card or your bank or PICS, your PICS account or whatever, however you're doing that. 
+
+So I'll just put it right before this. Okay. And then so, yeah. 
+
+So after an order placed... So I was looking at order placed as being something that kind of overlaps from taking the order to go into the kitchen. So once you order placed, that's an event that notifies you. I was almost looking at that as the same event. 
+
+The order placed is part of notifying the kitchen. But if it's coming from different places, I don't know. But the order placed, it's in a queue. 
+
+There's a queue. And maybe I have too much of a technical hack going on now. No, it's okay. 
+
+Usually what you have is you can have events triggering other events automatically. So you don't have to put too much on the same event. So if you have your kitchen staff being notified, you can add an event, which is kitchen notified or something like that. 
+
+And in this case here, it can be triggered by order placed. Right. So maybe there's something that pops up and it triggers a light or brings up on the computer or that they have notified that there is an order that they should start working on. 
+
+So yeah, kitchen should be notified somehow, however that is, whether it's from the order placed or... Yeah. You can have kitchen notified. You can also have, if you like, pizza prep started. 
+
+It's something depends on the level of detail you want to do. So we can say pizza prep started and pizza prep finished just to make it clear that you have a process here. And again, it's... Yeah. 
+
+I mean, if you wanted to get more fine-grained events, you would have... Yeah. So I always go back and forth how fine-grained it was. Exactly. 
+
+So it would... From a big picture, this is mostly it from a big picture. Obviously there's a lot of other, even preparing the pizza, that there could be a lot of baby steps in here. But from a big picture, you could put the started in there. 
+
+That's kind of nice. Okay. You started and you finished. 
+
+I think it's okay. Yeah. Because you started by first getting what the crust is, getting the crust ready. 
+
+And then you start figuring out what sauce is or the ingredients. And then the final thing is you put it in the oven. So yeah, this is pretty good. 
+
+Okay. Okay. Cool. 
+
+I don't get the final step is putting it in the oven. Yeah. And then when it's in the oven, basically at some point it's baked. 
+
+Maybe there's a clock event here that triggers or the chef is looking at it. Sometimes it's on a timer, but the chef is watching too. There might be some are usually like, oh, we know about three minutes and they're kind, but they're still watching in case the oven's a little hotter. 
+
+Yeah, exactly. So anyway, it's not... We kind of had a time, but we would always be checking them when I worked back as a young guy. We knew how long they kind of took. 
+
+This took five minutes, but we'd be looking. Oh wait, it's about ready now. Sometimes we put something that the pizza spatula thing in there to kind of check. 
+
+Oh, okay. Yeah. Look at the crust. 
+
+Oh, it's ready. Pull it out. Awesome. 
+
+We would go through things like that. Awesome. What about this sequence here? Do you think it's kind of complete or anything else from the big picture? Yeah, in the big picture I think it's about right, Martin. 
+
+I really do. Okay. Okay, cool. 
+
+Cool. So I just wanted to call your attention for some interesting transitions here. So you have one transition is when order is placed. 
+
+So order is placed is what we call a pivotal event because it changes the phase of your flow, right? It kind of starts a whole new step of your pizza business, which is preparing the pizza. And I would also suggest that either pizza boxed or probably order packed. No, it's really packed. 
+
+Because the order has been packed because it could be that, yeah, that seems to be, you got an order and you're processing that order. You're cooking one or more pizzas. It could be you're adding some extra things. 
+
+That seems to be kind of the pivotal event there. Yeah. And then once the pizza is delivered, the order, or I'm not, I shouldn't say pizza. 
+
+Once the order is delivered, it's mostly pizza. But once the order has been delivered, that's kind of the third, you're using the term pivotal events here. Yeah, exactly.
+
+Exactly. So you have, it seems that you have three main sequences of events here. One is more around orders. 
+
+The other one is more around the kitchen. The other is more around delivery. That's right. 
+
+Order kind of encapsulates payment. Right. Should we also look at what kind of values we need and who triggers the commands and stuff like that? We can do that in another step. 
+
+I just want to validate that those are main events. Usually we capture those. Right. 
+
+I think when you think of some of the other things who triggers them and stuff, sometimes that helps you figure out, even though this is clear on what the pivotal events are. Sometimes it's not clear until you look at what commands and who triggers the events and stuff. Then sometimes that helps you. 
+
+But this is clear to us. These are kind of the three bounded contexts that we're going to have with this, which is like you said, order placed or prepared. The order is prepared and packed. 
+
+So you could say prepared and packed, order prepared and packed. Maybe if I was to enhance this a little bit. You can go there and edit whatever you like. 
+
+Use the words you use normally. You can see here that we have interesting points here. You can look at my screen here.
+
+Let me see. Okay. Yeah. 
+
+Orders, delivery, kitchen. Interesting, right? Right. I think the thing is we just went ahead from our big picture, my simple early version.
+
+Payments will be part of the orders. We'll do payments in sync. But that's fine.
+
+It fits in well with that. Exactly. That's what I was showing.
+
+I was looking at the mirror board for a while, so I wasn't seeing you. I had to go back and look over here. Okay. 
+
+I see what you're doing. Cool. Awesome. 
+
+So we have our first big picture event storming session completed. Now we can iterate on this sequence here. So we can add commands and actors or whoever starts each of those steps.
+
+Are you ready to go now? To continue? Sure. Why not? Let's do it. We're having fun with this.
+
+We want to deliver pizzas, right? So why not? We can start with commands, which are blue stickies that we put close to the events. So some customer, when they're going to order, they're going to go to our system and request an order, whether they call in or whether they do it online. And so the customer is going to call in and they're going to start entering in either pizza type, you know, one or more pizza with the type or things they want. 
+
+And they also, that same customer, they'll request an order, but then they enter the pizza type, they'll enter the payment. I mean, well, they have to enter their address information and they have to enter in the type of pizza. So that would be the three main type of command.
+
+So the types of pizzas they have to enter, customer would be entering the types of pizza. And then the customer has to enter, you know, enter, I guess if they're calling in somebody else as a proxy for the customer, but they're listening to the customer on the phone and entering it in. But if it's our online system, they would be entering in, it would be the customer or it'd be somebody that's answering the phone, entering it for the customer, but it's still the same thing. 
+
+It's a proxy of the customer. Okay. So they're taking the order from the customer. 
+
+It's a customer. Yeah. So, so I guess it doesn't matter who, but, but you got to enter the, I would say enter pizza type or select types of pizzas or whatever. 
+
+That's the command you're, you know, and then the other one would be enter your delivery address, right? Or you don't select, you would enter, you have to enter. Yeah. I have to type it in. 
+
+We could have selection on pizza type because it could be, we give them predefined things that they select from. That's right. And then they, then they need to enter in their payment information. 
+
+Correct. So we have, let me just stretch this one a little bit to the right here. So you can have enter payment information, payment information, and that's also the customer, right? Right. 
+
+And, and then I think the system is the actual, it's going to actually process payment. That's right. It might go to an external system. 
+
+So our internal system can actually go to an external system, the process, the payment to charge the credit card or whatever, whether entering the card information and then authorizing it or however we do it. But the payment payment completed that had to be, it had to be something had to trigger it. And it could be the previous event triggered it after it's entered. 
+
+Then, then there's something triggers to process that payment to be completed. Okay. So your, your payment completed, I, I, it could be just from the previous event, I guess. 
+
+Yeah. Probably some. It's entered. 
+
+And so now you completed. And then, then at that point, once that's done, the order is placed. So those two events could just be in line. 
+
+So that's probably what you have is accurate. You probably don't need much else. But since you mentioned that Joe, I'm thinking here that you may have some sort of payment system here, right? Because you said system, there's a system involved with payments, right? So maybe.
+
+Yes. Yes. It could be a payment system that you're interacting with. 
+
+Yeah. That one, once the information is entered, it goes through a payment system and then it's completed. That's right.
+
+That's right. So you could have something like that. Yeah. 
+
+Right now we, we just use our credit card. We just take it and process and enter, you know, the credit card machine, which we can enter in or whatever. Exactly. 
+
+Or if they want to pay through PICS or we'll take that too. That would be great. Yeah. 
+
+That would be awesome. That's even better because we have less fees. Yeah.
+
+So moving on. So kitchen is notified. That's also something that is triggered by the order.
+
+And by the way, it's a chef that's being notified. So somehow the system, the order placed as a system is, is the actual, the order has been placed is by this, our order placed system has notified the kitchen. So those two events, there is something going on between here and here. 
+
+This automatically triggers this. So that is the event that triggers this event to be notified that an order is here. Okay. 
+
+Yeah. Makes sense. It's automatic. 
+
+Yeah. But once this is done, the, the actor that's prepared, the prep is done by a pizza chef. We have a pizza chef that's going to prepare the pizza, prep the pizza. 
+
+I agree. So there is a pizza chef. Prep the pizza is what the command is. 
+
+They're prepping the pizza. Yeah. And this is by the pizza chef. 
+
+Okay. Oh, sorry. I just should have. 
+
+What happened? Oh, okay. Okay. Prep pizza. 
+
+And then we have the pizza chef. The actor would be, yeah. So this would be kind of the command here for this. 
+
+And yeah, this is the actual, the chef and then the chef. So ultimately as they're prepping it, this, that's why I almost had these as one they'll prep it. Then they're finished. 
+
+Once they're finished the pizza. So let me just do this. Does this is us interacting together. 
+
+He puts it in the oven. Yeah. Right. 
+
+So if I was going to, but I don't know how we say it is. I don't know whether it's command here. The pizza chef just puts it in the oven. 
+
+So maybe we don't have to have an inner intermediate. This is all part of the final thing. The chef will now take and put it in the oven. 
+
+Something like that. Exactly. So if this process is done by the system, maybe you need to detail more the commands.
+
+But if this one is taken care by a crew that you have in the kitchen, maybe you don't need all of that. So you just need to, you know, have like, if you have like a system that is used by the kitchen, maybe you need something here to get notified. Okay. 
+
+Yeah. That just actually, from the order place, it actually just notice. So like you said, one command, one event can just trigger. 
+
+It can be the trigger for the next command. So this is the command for this. Yeah. 
+
+And then the pizza chef, after it's prepared, they'll put it in here. Now, once it's baked, the pizza chef will pull it out, but we may have somebody else boxing it by the way. Okay. 
+
+So the pizza chef, the command. So the pizza chef, after it's baked, I'm just trying to think of what to put here. We may have something going on here with the pizza pulled out of oven. 
+
+It almost sounds like an event, but, and maybe it is, I'm not sure yet because we're just brainstorming still here. Okay. But then we can have like the, either by assist, this could either, this could be anybody. 
+
+So I don't, I'm trying to, anybody in the kitchen, kitchen staff, maybe that's what I'm going to call it. Okay. Because it could be an assistant. 
+
+It could be the chef, you know, depending on what's going on, but this could be boxed by, it can be boxed and prepared. These two steps could be done by this kitchen staff. Okay. 
+
+And it's really that the pizza has been pulled out of the oven. You know, I don't know whether there should be another event here, or if we say this is a command. So there really is an event that after it's baked, it's pulled out of the oven, right? So baked means it's done, I guess. 
+
+So it's pulled out somehow. Yeah. It's finished. 
+
+So I'm not sure if there should be another, how that should be handled with this. We can, I can, I can make a suggestion here. So pizza pulled out of the oven looks like an event because it does really. 
+
+So let's put a pizza. Let me delete this one. Okay. 
+
+And the pizza chef does after it's baked, the pizza chef pulls it. Yeah. There we go. 
+
+And then the kitchen staff is going to be the one that boxes and prepares, which could, by the way, could be the chef, or it could be anybody else. And we could have somebody else that handles it, helps the chef by doing all the packing. So the chef can keep pizzas going. 
+
+That's right. That's right. Okay. 
+
+So once the order is packed, someone has to notify the delivery people, right? So I'm assuming there is another. Oh, wait. Sorry. 
+
+Go ahead. Okay. There should be something here called, the command is, I guess if you ask me, it's the cook pizza. 
+
+Okay. If we were having a command here. Okay. 
+
+And then there might be one more command down here. Whoops. Somewhere in here. 
+
+And I don't know what the command and where it goes, but pack order. That's the command. Okay. 
+
+So if there is a command, I would almost have a couple of these going on here. Okay. Okay. 
+
+Okay. If you were asking for commands. Okay. 
+
+Okay then. And then once you're done, somehow this triggers just like kitchen was notified, the delivery people are notified. Yeah. 
+
+So this is what I suggest we model here. So kitchen notified is something, let's say internal from your kitchen staff. So let's assume it happens out of the software inside your system, but the delivery people is from what I learned here, an external party. 
+
+Right. We might have to send them a text message or we may, or they might be here and then they're like, there's a system that they're looking at, or maybe they're sitting in the waiting area and then they see, Oh wait, these orders are ready. So sometimes they'll see it because we'll put the pizza right up there, but it could be they get notified through our system. 
+
+My question to you is who notifies them? Is this the kitchen staff? Does it make sense? Either that or when they pack it, then, and once they enter it in, it updates the system. The kitchen staff could be the ones that say, Hey, the pizza's ready, but it could be they're not there. So they're going to be too busy to call them. 
+
+So they might just be entering it in that this pizza is ready to ship or ready to deliver. Okay. So when someone finishes packing the order, I'm assuming someone will take an action to notify the delivery people.
+
+The kitchen staff will have to somehow enter in that the pizza is ready to be delivered. And I thought that happened here. It was once that they fit, it's prepared and packed.
+
+Okay. Okay. Awesome. 
+
+I thought this did it right there. That one I have highlighted right now here, order prepared and packed. Yeah. 
+
+I'll even add that on there. Let me add that. Okay. 
+
+So yeah, we would like to be more explicit. So whenever there is a command that is triggered by a event, we usually model that command explicitly here. So I just put notify delivery people as a command. 
+
+It is executed by kitchen staff. Yeah. And it could be happening from this event. 
+
+It's notifying them automatically by updating if we have an app for them, but however they do it, or because they see the pizza being put there. Yeah. So what we do is we could model that there is a delivery system that is outside our scope. 
+
+For instance, it could be just someone's WhatsApp or an SMS that the delivery guys have, but they also could have a simple system that you just say, oh, there is this order here from our pizza place to this address. Yeah. And they receive that. 
+
+We don't have to get into details now. Right. So let's think of not technical at all. 
+
+So if we're not technical, kind of before the old school way this was done is they would come and they would see these orders ready to go because they've been put, the pizza kitchen staff had put the orders that are ready to go, line them up, and then they would just come up and see them. Now that can also be put into a system, but let's just think of doing it without a system. So you have the set of orders right there that are queued up, the ones that we have got prepared and ready to go. 
+
+And then the delivery people will come and grab the orders that are for them. Sometimes it could be that we have to, maybe we message our drivers, Pineros, hey, we got three orders for you, WhatsApp. And then that might be how we're notifying them as well. 
+
+But a lot of times they're just showing up at our, so for keeping it real simple, they show up at our store and they just see that those orders are there and then they're grabbing the next set of orders. First in, first out. The simplest is first in, first out. 
+
+So you have this command anyway, they have the kitchen staff notify them, maybe just give a WhatsApp message or whatever. Or they just put them on the table there, the order table. Exactly. 
+
+And then they will pick up the order. I think there's no command. That's a delivery person that does that. 
+
+That's exactly. And then order is delivered. Do you think, oh, sorry, I'll put the delivery person here.
+
+Right. The two people, the delivery person will actually pick it up and deliver it. Okay. 
+
+Okay. So it's. And then ultimately that's being delivered to, so that's a delivery person. 
+
+Let me ask you one more thing, Joe. Do you think that after the order is delivered, do you have to receive a notification that it was delivered? I want them to notify that the order. So I don't know. 
+
+I just thought that that was part of the order delivered event. Okay. They have to enter in. 
+
+So part of order delivered, if I did not have another event, I would just have aggregates that say and entered the delivery time and confirmation. Okay. So you could actually be part of the, that same event and then just have aggregates for that. 
+
+Okay. It's very nice to have a technical customer like you. Yeah, but you're right. 
+
+Order delivered. So part of, once it's delivered, you have to be notified. So that we know that, that's what I say. 
+
+If a customer calls me, I want to look and see, oh wait, I see it has it. And then I also can see who the delivery person is. Exactly. 
+
+So I guess when they pick it up, they also have, so part of picking it up, I wasn't getting into the, I was keeping big picture events. So smaller picture events, part of the event of picking it up, you have to put your name with which orders you picked up. So that way I know if I get called by a customer to call you or SMS, hey, what happened? Oh, you were in an accident. 
+
+Okay. Let me tell the, don't worry. We're going to make another one for you.
+
+There was an accident. Unfortunately, somebody hit our driver, but we're going to send out another order for you just as soon as possible. But yeah, part of order picked up is they're going to, that's going to trigger, but this is big picture. 
+
+There's going to be sub events within that is they have to enter in who they are, who the delivery person is. And then they have to figure out where to deliver it. Right. 
+
+Exactly. Exactly. There's all these other, but from a big picture event, I was just kind of staying with this. 
+
+Okay. We can leave this one out. Order delivered. 
+
+I was looking at that as almost as being part of the notification, but we could separate that out. Okay. Sure. 
+
+Okay. Sure. With this, we'd make it explicit that there is another interaction with your internal systems or your whatever. 
+
+And we know that this has happened. So, okay. All right. 
+
+So part of picking it up, I would have, I would have, I would have some of the information that, so we haven't talked about aggregates yet, but when we get into the aggregates, we will, we will have some of that information that's needed, which might show us new events that we need. So that's why this is kind of an inner, this is kind of good. It's an inner process. 
+
+I think we should get into the aggregates. That's kind of our next step, right? That's right. That's right. 
+
+So with all this, let me just take a snapshot of what we have here. It is great. It is great. 
+
+We have a lot of insight on your business and we can either keep editing this diagram or we can move on to another area. I suggest we move on, we copy this here and start editing it here. Otherwise it may, we may want to get back to the big picture. 
+
+Well, generally when I'm doing event storming, we can just add some stickies for the type, the high level types of aggregates that we need for. So if we could stay with the same picture and add a few of the, the colors of that we want for aggregates, right? Oh, all right. So, and I think with that, with aggregates, we're using things like the yellow stickies, yeah, the large, the horizontal yellow. 
+
+Yeah. So obviously with, so when we do an order, an order we're entering in, so even delivery address, see now the nice thing is it's showing me that some of the events should be rethought because we need more than just delivery address. We need the name of the customer. 
+
+So it's almost like the customer information, customer and delivery information. We could say delivery address, but, but we need, we probably want the name of the customer too, right? Yeah. We could say just delivery information and then the information contains the address and the name. 
+
+What do you think? So we could keep it more. Yes. No, that's good.
+
+That's good. I like that. So, so if you added an aggregate sticky here, if you could make some room and let's do that, I would say you need the customer's name and delivery address and phone number. 
+
+What's that? You know, some kind of, those would be the three pieces of information, three aggregates that I would say. Okay. So, so the customer, well, and maybe you just need the customer information. 
+
+The customer delivery information is maybe from a high level aggregate, then it could have some other lower level entities as part of that. Okay. But the big aggregate will be the customer information. 
+
+Yeah. Okay. Can we just say customer? Because the information is kind of implicit in the fact that it is a... Right. 
+
+And then the next thing is you need the order. So you just need the order. So I would here, I can... Agree. 
+
+Let's do the order. Whatever the order, and it'll have details about the order, which are one or more pizzas or, but what is the order? Okay. Exactly. 
+
+So... And then the kitchen, the kitchen doesn't need as much right away for, the kitchen mostly needs early on just the order. So to prepare the pizza, they need the order information, right? They need the order. What is the order? Yeah, that's right. 
+
+So I'll leave the order here. It may be a different view of order and they may need it associated with some customer, but they may not need the delivery information details. But either way, you just need to do the order. 
+
+And maybe that's good enough. I don't know. Maybe you just need the set of orders. 
+
+You don't care who it's for. The kitchen staff doesn't care. They're just making the order. 
+
+Yeah. They don't know whether it's for Martin or Joe. They just know we need a pepperoni pizza. 
+
+That's right. We don't care who it's for and we don't care where it goes. We just need to know what kind of order. 
+
+You're right. So we only need, if we sit, that simplifies it even a little bit more is if I really look at that, we only need quick order. Now, once the order is prepared and now it's, now one thing they do need is when they need some of the customer information when they're after their, when they pack it and have to put instructions on it. 
+
+Yeah. Yeah. So that might be even before, because if the order has been packed and we're notifying delivery people, so they're prepared and packed that part of the system might need some of the customer or at least, yeah. 
+
+I need some of the customer information, the delivery information. Yeah. We need the delivery information. 
+
+That's right. And order. And that's part of the last, the order prepared and packed. 
+
+That's part of packing the order. Cause you want to put that information on there, right? That's right. And then, then, then of course, maybe there's no need for the order here. 
+
+Just the delivery information. I don't know. Possible. 
+
+It's possible. I mean, you might want that just so they can confirm it. You might want to a high level what's in the order. 
+
+So you might have a different view of, oh, we have three items. We have two pizzas and, but so maybe you want some of the order information for the delivery person. So in case the customer challenges them, that's right. 
+
+So, so sometimes they may have a, so you might want some of the order information over here too. Yeah. Some, some part that refers to what, what, what specifically that is not included in the delivery information, like the type of. 
+
+You had three pizzas, two, two large pepperonis, or maybe it's very general, but you might need some extra order information here. Yeah. So, you know, I guess we could not, but then, but then in case the customer challenges them, it might be good if they have, you might want some, some view, it might be a different view of the order, but maybe not, maybe it's only delivery. 
+
+The simplest would just be the delivery. Let's assume that we may have some, some, some order here that is necessary. Okay. 
+
+Okay. So those are, those are the main aggregates. Okay. 
+
+Okay. Let me, let me ask you one thing, Joe. Do you know if there's any policy or a thing that you, you have to implement so you have a consistent order, like the type, some, some sort of flavor or topping, sorry, cannot go with some type of crust or vice versa, or maybe. 
+
+Well, we may have some of these types of things, but the main, but from the simplest view is no, we could do almost whatever, but you're right. It could be that it could be that if you're ordering this kind of crust, we don't want to, if you're ordering a thin crust, we can't really do that many toppings on top. You need a thick crust or with a thick crust, you only can get certain size. 
+
+So there might be some kind of variations, but that could, there could be some policies later. Yeah. But I see that from the simplest view. 
+
+Yeah. No. Do you need anything for policies around the delivery addresses? Like you only deliver within a radius of your store, anything like that? We can just write this down as a simple policy.
+
+Yeah. I mean, we'll do, let me think, 15 kilometers from the store, 10 or 15 or something like, yeah. So, so we would have something like that. 
+
+Five kilometers is free, you know, maybe we have a little bit of, but, but I was working, figured we were working on those variations later, but we definitely have, we wouldn't deliver to Campinas for example. That would be too far. No problem. 
+
+We can't, we can't do those later. We'll only deliver in these neighborhoods, Pinheiros and Itaumbibi for example. Okay. 
+
+We can enter those later. No problem. So I think we have pretty solid result for our first session here.
+
+We can add more details later. We can refine the aggregates and get into more information about the fields and the data entities that we have. I think we should save that for another time in which we have our development team more present here. 
+
+And what do you think? I think, I think you're right. No, this is really good as a beginning session for us to kind of look at what we have here. I'm liking this.
+
+Okay. Awesome. Awesome. 
+
+I think we have a pretty solid, you know, brainstorming, event-storming here for our first session. Yeah. It's awesome to see your idea come to life. 
+
+And I hope we get more into this on the next sessions. All right. All right. 
+
+Thank you, Joe. Yeah.

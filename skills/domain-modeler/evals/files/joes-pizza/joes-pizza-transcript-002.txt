@@ -1,0 +1,189 @@
+Hey Joe, how are you? Good Martin, good to see you again. Good to see you again and I see that you added legend or key to our diagram. That's great because that helps people see what we're building here. 
+
+Not everyone knows about event storming, right? Right, yeah. So I was kind of taking what you and I had picked as colors before with the aggregate yellow sticky and the domain event is the orange sticky and the command is the blue sticky and the system is the pink sticky. Then you had kind of the different yellow kind of smaller actor sticky with that. 
+
+So yeah, that's what I added. Oh, perfect. So I assume today we could take some more details from the entities we have here so we can go more deeply into which data fields, which information we have for each of those elements that we're dealing with. 
+
+What do you think? Okay, so you want like some of the different values for the aggregates and that's like the customer and the order and and then maybe some of the different boundaries between these systems that we've kind of highlighted here. Yeah, exactly. That's what I'm thinking. 
+
+So with customer, I know that obviously I'm going to need the name of the customer. Okay. And sometimes I've seen this just done with a smaller font if it's possible to just do the part. 
+
+I don't know if these cards can do that or not, Martin. Oh, okay. Or do we have to do that? So we could actually put like we need the name and we need the address. 
+
+I don't know if we can do if we can have different font size. We can use a separate, let's say a policy, which is meant for that kind of thing. So you want to do a different color for the aggregate and for the actual values of the aggregates. 
+
+Yeah. Okay. Sometimes I just write them in, but we can do that. 
+
+So you want to use this purple. Yeah, I think, I mean, we could use this one. This is more like a policy. 
+
+So you could use it for the aggregate values. Whoops. Sorry. 
+
+Yeah. So you could say something like customer fields, right. Or customer info. 
+
+And then you could say name. Phone number. Phone number. 
+
+Yes. And then address. Address. 
+
+Okay. So that's probably good enough for the customer. And usually that's part of the aggregate. 
+
+These are usually your entities. So these are usually kind of the, that's why I usually put it in as part of the same sticky, but I just write it as a dash value underneath. So another way we could do it, if you're okay with that. 
+
+Yeah. Sometimes what I do is like name. I was hoping the sticky could let me make the customer name bigger, but it doesn't look like it does that. 
+
+Yeah. It doesn't have support more than one font size per sticky. I'll have to look at my mural to see if that does.
+
+It might. So something like that too. Here's another way it could be done. 
+
+But if you want to make the customer name bigger and have it separated, if we do this, we should actually put this in the legend though, shouldn't we? Yeah, that's absolutely right. We can't do this. Yeah.
+
+That's not. So if you want to do that, you want to add it to the legend? No, we can't keep it simple. We can't use the same. 
+
+Oh, okay. Okay. So let me add it back in. 
+
+So dash, well, obviously we need the, we want the name of the customer. That's very important. Yeah. 
+
+And then we need the phone number and then we need the address. Does that make sense to you? Yeah, absolutely. Yeah. 
+
+Makes sense. Just a little bit bigger. Okay. 
+
+So those dash, whatever are kind of the values, those may be just simple attributes or they could actually be other entities, right? Yeah. So the customer aggregate will have that. Now order, what do we need? Oh, so an order, when I think of an order, when you're ordering a pizza, you have one or more items that you're ordering. 
+
+That's right. So I think every pizza will have items. And then along with the items, so the items with each item, it'll be what the item is and the quantity. 
+
+So it could be that you want two pepperoni pizzas, but, but if I just look at the items itself as a high level, there could be something underneath here. If we wanted to add kind of another type of things and I don't know what, what you would use for that, but the items itself, which I could say here is the item and the quantity, right? Yeah. Something like that. 
+
+Is that, does that make sense? Makes sense. Yeah. So the actual, like the pizza or garlic bread or whatever, and then the actual quantity and the item would also describe the type of pizza.
+
+So it would say, oh, is it pepperoni with extra cheese or a half pepperoni, half cheese, and it's a large or small or medium. Okay. So the type and the topping, right? Type and topping.
+
+Right. Yeah. Yeah. 
+
+So it, so it would have something like that. That's good. Yeah. 
+
+So for, if it's pizza, for example, it would have type and topping. If it's a salad, it would have the type or whatever. But if we just stay with pizza, it would have like the type and the topping. 
+
+Okay. That's and then probably, probably we missed one possible aggregate here. Okay. 
+
+Is your payment information. Okay. Okay. 
+
+Do you, does that make sense? Do you agree? Does it, we could do that, but we also could assume that the payment system is an external system. And then we redirect the user to the system. Uh, it does the payment there with information that we gave the payments. 
+
+Like for instance, the, the, the price that it has to pay. And then the user comes back with the payment approved or, or denied. Okay. 
+
+Okay. So that way we don't, so there could be a, so there needs to be some kind of an event coming back. So maybe we missed an event. 
+
+Well, we do have it payment completed. Okay. Okay. 
+
+So if a payment is completed, then the order is placed. Okay. So the payment system, maybe it's securely keep things. 
+
+We're not keeping track of any of that information that happens. The payment system may have that, but we don't need it within our system. Okay. 
+
+Otherwise we have to deal with other, you know, things like PCI compliance, et cetera. So then, then what I'm going to do is copy this orders over to here because this orders actually is the same thing that's needed for the pizza over here. Right? Yeah, exactly. 
+
+So I'm going to go ahead and update this order and the delivery information. When I think of what the delivery, I wonder if this gets smaller. Okay. 
+
+The delivery information will need things like, I still think having the name is useful. Yeah, I agree. That's a, you could say that this is a customer, but in another bounded context. 
+
+So you need different pieces of information. Maybe name, phone number, address are still helpful, but it's probably another bounded context, which is something we already discussed. Customer delivery info or something like that. 
+
+Right. Yeah. So it still is kind of the customer. 
+
+We could just even say customer if we wanted to, I guess, but it's got that, but, but there might never made me think here is, I don't know whether we need the phone number or not. The delivery person might want that, but they might, we might need a delivery instructions, right? Yeah. Because you could say, leave it on the porch or ring this code, right? Yeah, that's right. 
+
+Depending on, so I don't, so when we do the order, it seems like we might need some of that information too, right? Yep. So maybe like delivery instructions. That's right. 
+
+That's right. Okay. So I'll add that back to the original. 
+
+I don't know whether we need the phone or not. You could cop and paste this one here. I mean, let me suggest this. 
+
+You could use this one here if you like. Okay. I guess mostly, and you're right. 
+
+Originally I was trying to think we could have an example that has separate view. I agree. I agree. 
+
+With our example, I think almost all that information is. Unless you, yeah, yeah. You know what I mean? I was trying to show an ubiquitous language.
+
+With a ubiquitous language where you have a different view. Yeah. Unless we arbitrarily decide that we're not putting the phone number, I don't know here, but I see you. 
+
+I see your point. So originally I think with delivery information, the minimum amount you need is like maybe address and delivery instructions, but it might be useful if they have, if they get there, they might want, they might need your name. Martin, this is Joe, the pizza guy. 
+
+Exactly. Yeah. And maybe we need to call you because it doesn't answer. 
+
+Hey, we're here with the pizza. Are we at the right place? That's right. That's right. 
+
+Let me just point you to this. We have five minutes left in the session. Okay. 
+
+And I think we can get that closer to a result here. So we may, if I might, I would add one other information to order, which is the price, because sometimes maybe we're going to send this to the payment system. That's right. 
+
+We probably want to keep track of that, but we don't need that in the kitchen. Exactly. So the kitchen doesn't have it. 
+
+Exactly. So that's kind of good. By the way, I think we have some different, around the pivotal events, and we should name these by the pivotal events. 
+
+I think we should actually, and I want to do this with, let me see if I can, can I get a dotted line, a shape? I'm trying to see if I can get a dotted line shape. Yeah, you could use like, let's say an oval. I can get an easy... And then you could use... Yeah. 
+
+Okay. And then let's name that because this is actually, so yeah, I think we should actually do what you're doing here. I like this because this actually is showing that this here is happening. 
+
+We should put a label on this, shouldn't we? We could. Yeah. So we could. 
+
+Just a normal label like here. I can make the font bigger. What do we call this? This is a... Order. 
+
+Order. Process order or something. Order. 
+
+Orders. Yeah. I think order is a good name. 
+
+Okay. Something like that? Let me just think for a second on that. That could be... Yeah. 
+
+Place order. We could even call it place. Anything like that. 
+
+But anyway. I think for a domain name, orders. Okay. 
+
+Orders is good. Okay. So let's just go with that.
+
+And then there's another... All these things here in the middle are for preparing the pizza, right? I would say that's the kitchen, right? That's the kitchen domain or subdomain. It could be. Yeah. 
+
+So let's put... But we should actually put a... I don't know which circle you used. If you could make another one. There you go. 
+
+Okay. But make it a little bit. We want these things kind of up in here too. 
+
+Okay. I can make it... Oh, sorry. I can make it work as out here. 
+
+So there you go. We can keep this one as whatever we want. Yeah. 
+
+Okay. Kitchen. Cool. 
+
+And then the last one obviously is delivery. Delivery. Yeah.
+
+And if we need to pull some of this stuff over, you can. But maybe it's... Okay. So these are kind of... Because you were saying we need to kind of put them around the main events.
+
+So what does this... Did we want to change what... What does this order need here? This may be... What does this delivery information need here? Yeah. It's basically the information for delivery. So maybe the information we have here under kitchen could be moved to delivery so that it is available for delivery. 
+
+Okay. I agree. So let's put that over there. 
+
+And actually, I don't think we need the delivery over in kitchen. It just needs to be over here in delivery. Yeah. 
+
+So if you want to move that out here, I'll delete the other one because I think... Whoops. There we go. Okay. 
+
+Okay. Okay. Something like this, right? Yeah.
+
+Makes sense. And then here to the kitchen staff is the one that's notifying the delivery people. Okay. 
+
+So there's kind of an overlap. They're coming from here to here. I see. 
+
+Okay. Cool. And that's once it's prepped and packed, which that could be the kitchen staff indirectly as how it's still notifying it automatically. 
+
+Or it could be they yell out, hey, we got an order Yeah. Exactly. Exactly. 
+
+However it happens. Okay. Okay. 
+
+Okay. Cool. Okay. 
+
+So what I'll do now, Joe, I'll save this in a nice image so we can use this later for our reference. And I'm also saving our recording here so we can later use it again for us to remember some things. And that's it. 
+
+Very good. That's it. Very good. 
+
+That adds the missing pieces that I think we didn't have time. Yeah. I think so. 
+
+Okay. You're having a few of the attributes. Instead of inferring, it will use our fields and whatever we said. 
+
+Right. And usually you're asking on these aggregates what kind of values you have and what are the entities and values you have. If you don't mind, I'll stop our recording. 
+
+Perfect.
