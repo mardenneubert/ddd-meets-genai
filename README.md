@@ -1,6 +1,6 @@
 # Domain Modeling Meets Generative AI
 
-**Turning domain conversations into structured, machine-readable models — with AI agents that understand DDD.**
+**Turning domain conversations into structured, machine-readable models with AI agents that understand DDD.**
 
 This repository contains the specifications, AI agent skills, and evaluation cases from our ongoing research into the intersection of Domain-Driven Design and Generative AI. The core idea: domain knowledge captured in Event Storming workshops can be systematically transformed into verified domain models by LLM-powered agents, bridging the gap between collaborative domain discovery and software implementation.
 
