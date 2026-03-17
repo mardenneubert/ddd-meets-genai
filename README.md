@@ -108,7 +108,7 @@ Marden and Joe have been collaborating on software architecture patterns since 2
 
 ## Presentations
 
-- **Agile Brazil 2025** (Florianópolis, September 2025) — *Domain Modeling Meets Generative AI.* First public presentation of the ESML/DMML pipeline with manual prompt orchestration and the Joe's Pizza case study.
+- **Agile Brazil 2025** (Rio de Janeiro, September 2025) — *Domain Modeling Meets Generative AI.* First public presentation of the ESML/DMML pipeline with manual prompt orchestration and the Joe's Pizza case study.
 - **XP 2026** (São Paulo, April 2026) — *Domain Modeling Meets Generative AI.* Updated with agent skills, evaluation framework, spec-driven development framing, and the Bringots case study.
 
 ---
@@ -132,4 +132,4 @@ MIT — see [LICENSE](LICENSE).
 
 If you reference this work, please cite:
 
-> Neubert, M. & Yoder, J. (2025). *Domain Modeling Meets Generative AI.* Agile Brazil 2025, Florianópolis, Brazil.
+> Neubert, M. & Yoder, J. (2025). *Domain Modeling Meets Generative AI.* Agile Brazil 2025, Rio de Janeiro, Brazil.
