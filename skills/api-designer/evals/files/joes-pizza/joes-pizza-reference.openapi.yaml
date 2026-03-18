@@ -1,0 +1,1192 @@
+openapi: "3.1.0"
+info:
+  title: "Joe's Pizza Place API"
+  version: "0.1.0"
+  description: |
+    REST API for Joe's Pizza Place, an online-only pizza delivery service
+    in São Paulo, Brazil. Generated from the DMML domain model. Each bounded
+    context is exposed as a separate API section (tag) with commands as POST
+    endpoints and queries as GET endpoints.
+
+    **Bounded Contexts:**
+    - **Order Management** — Customer-facing order lifecycle from request
+      through pizza selection, delivery info, payment, and placement.
+    - **Kitchen** — Pizza preparation pipeline from order receipt through
+      prep, bake, box, and pack.
+    - **Delivery** — Order delivery from packed order through driver
+      notification, pickup, and delivery confirmation.
+
+    **External Dependencies:**
+    - **Payment Gateway** — External payment processing for credit cards
+      and PIX. Integrated via ACL in Order Management. Not exposed as
+      API endpoints.
+
+    **Domain Events:**
+    Events are emitted as side effects of commands and are returned in
+    command responses. In a production system, these would also be
+    published to an event bus for cross-BC communication.
+
+tags:
+  - name: Order Management
+    description: >
+      Customer-facing order lifecycle. Manages customer registration, pizza
+      selection, delivery information, payment processing, and order placement.
+      Owns the Customer and Order aggregates.
+  - name: Kitchen
+    description: >
+      Pizza preparation pipeline. Receives orders from Order Management and
+      tracks individual pizza preparation through prep, bake, box, and pack
+      stages. Owns the KitchenOrder aggregate.
+  - name: Delivery
+    description: >
+      Order delivery management. Receives packed orders from Kitchen, manages
+      driver notification, and records delivery confirmation. Owns the Delivery
+      aggregate.
+
+# =============================================================================
+# PATHS
+# =============================================================================
+
+paths:
+
+  # ---------------------------------------------------------------------------
+  # ORDER MANAGEMENT — Customer Aggregate
+  # ---------------------------------------------------------------------------
+
+  /order-management/customers:
+    post:
+      tags: [Order Management]
+      operationId: registerCustomer
+      summary: "Register Customer"
+      description: |
+        Create or update customer information during the ordering process.
+        Part of the order flow, not a standalone registration.
+
+        **Note:** This endpoint is draft — inferred from the domain model as
+        the Customer aggregate's portion of the ordering flow.
+
+        **Emits:** (none currently defined)
+      x-draft: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterCustomerRequest'
+      responses:
+        '201':
+          description: "Customer registered successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          description: "Input validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: "Domain rule violation (e.g., missing name or phone number)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order-management/customers/{customerId}:
+    get:
+      tags: [Order Management]
+      operationId: getCustomer
+      summary: "Get Customer"
+      description: "Retrieve customer information by ID."
+      parameters:
+        - $ref: '#/components/parameters/CustomerIdPath'
+      responses:
+        '200':
+          description: "Customer found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '404':
+          description: "Customer not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ---------------------------------------------------------------------------
+  # ORDER MANAGEMENT — Order Aggregate
+  # ---------------------------------------------------------------------------
+
+  /order-management/orders:
+    post:
+      tags: [Order Management]
+      operationId: requestOrder
+      summary: "Request Order"
+      description: |
+        Initiate a new order. Creates the order in Created state.
+
+        **Preconditions:**
+        - Customer must exist
+
+        **Emits:** OrderRequested
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestOrderRequest'
+      responses:
+        '201':
+          description: "Order created successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCommandResponse'
+        '400':
+          description: "Input validation failure"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: "Domain rule violation (e.g., customer not found)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order-management/orders/{orderId}:
+    get:
+      tags: [Order Management]
+      operationId: getOrder
+      summary: "Get Order"
+      description: "Retrieve order details by ID, including current status and items."
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: "Order found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          description: "Order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order-management/orders/{orderId}/select-pizza-type:
+    post:
+      tags: [Order Management]
+      operationId: selectPizzaType
+      summary: "Select Pizza Type"
+      description: |
+        Add or update pizza selections for the order. Specifies pizza type,
+        toppings, and quantity.
+
+        **Preconditions:**
+        - Order must be in Created or Configuring state
+
+        **Note:** Can happen before or after delivery info entry — these
+        steps are concurrent.
+
+        **Emits:** TypeOfPizzasSelected
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectPizzaTypeRequest'
+      responses:
+        '200':
+          description: "Pizza type selected successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCommandResponse'
+        '404':
+          description: "Order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Order not in valid state (must be Created or Configuring)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: "Domain rule violation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order-management/orders/{orderId}/enter-delivery-information:
+    post:
+      tags: [Order Management]
+      operationId: enterDeliveryInformation
+      summary: "Enter Delivery Information"
+      description: |
+        Provide delivery address and optional delivery instructions.
+
+        **Preconditions:**
+        - Order must be in Created or Configuring state
+
+        **Note:** Can happen before or after pizza type selection — these
+        steps are concurrent.
+
+        **Emits:** DeliveryInformationEntered
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterDeliveryInformationRequest'
+      responses:
+        '200':
+          description: "Delivery information entered successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCommandResponse'
+        '404':
+          description: "Order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Order not in valid state (must be Created or Configuring)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order-management/orders/{orderId}/enter-payment-information:
+    post:
+      tags: [Order Management]
+      operationId: enterPaymentInformation
+      summary: "Enter Payment Information"
+      description: |
+        Provide payment details to be forwarded to the external Payment System.
+        Transitions order to PaymentPending.
+
+        **Preconditions:**
+        - Order must be in Configuring state
+        - Pizza selection and delivery info must be complete
+
+        **Emits:** PaymentInformationEntered
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterPaymentInformationRequest'
+      responses:
+        '200':
+          description: "Payment information entered, forwarded to Payment Gateway"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCommandResponse'
+        '404':
+          description: "Order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Order not in valid state or missing pizza/delivery info"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /order-management/orders/{orderId}/confirm-payment:
+    post:
+      tags: [Order Management]
+      operationId: confirmPayment
+      summary: "Confirm Payment"
+      description: |
+        Record payment confirmation from the external Payment System.
+        Transitions order to Paid. This is typically called by a webhook
+        or callback from the Payment Gateway, not by the end user.
+
+        **Preconditions:**
+        - Order must be in PaymentPending state
+        - Payment reference must be valid
+
+        **Emits:** PaymentCompleted
+
+        **Policy trigger:** PaymentCompleted triggers the
+        pol-place-order-on-payment policy, which automatically finalizes the
+        order and emits OrderPlaced.
+
+        **Note:** This endpoint is draft — inferred from the integration
+        pattern with the external Payment Gateway.
+      x-draft: true
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+      responses:
+        '200':
+          description: "Payment confirmed. Order transitions to Paid, then automatically to Placed via policy."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCommandResponse'
+        '404':
+          description: "Order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Order not in PaymentPending state"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ---------------------------------------------------------------------------
+  # KITCHEN — KitchenOrder Aggregate
+  # ---------------------------------------------------------------------------
+
+  /kitchen/kitchen-orders:
+    get:
+      tags: [Kitchen]
+      operationId: listKitchenOrders
+      summary: "List Kitchen Orders"
+      description: "Retrieve kitchen orders, optionally filtered by status."
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Received, InPreparation, Packed]
+          description: "Filter by kitchen order status"
+      responses:
+        '200':
+          description: "Kitchen orders retrieved"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KitchenOrderResponse'
+
+  /kitchen/kitchen-orders/{kitchenOrderId}:
+    get:
+      tags: [Kitchen]
+      operationId: getKitchenOrder
+      summary: "Get Kitchen Order"
+      description: "Retrieve kitchen order details including pizza preparation status."
+      parameters:
+        - $ref: '#/components/parameters/KitchenOrderIdPath'
+      responses:
+        '200':
+          description: "Kitchen order found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitchenOrderResponse'
+        '404':
+          description: "Kitchen order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /kitchen/kitchen-orders/{kitchenOrderId}/prep-pizza:
+    post:
+      tags: [Kitchen]
+      operationId: prepPizza
+      summary: "Prep Pizza"
+      description: |
+        Begin preparing a pizza: get dough ready, apply sauce, cheese, and
+        toppings.
+
+        **Preconditions:**
+        - PizzaPreparation must be in Queued state
+        - KitchenOrder must be in Received or InPreparation state
+
+        **Emits:** PizzaPrepStarted
+      parameters:
+        - $ref: '#/components/parameters/KitchenOrderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepPizzaRequest'
+      responses:
+        '200':
+          description: "Pizza preparation started"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitchenCommandResponse'
+        '404':
+          description: "Kitchen order or pizza preparation not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Invalid state (pizza not Queued or order not Received/InPreparation)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /kitchen/kitchen-orders/{kitchenOrderId}/cook-pizza:
+    post:
+      tags: [Kitchen]
+      operationId: cookPizza
+      summary: "Cook Pizza"
+      description: |
+        Place the prepped pizza into the brick oven for baking.
+
+        **Preconditions:**
+        - PizzaPreparation must be in Prepped state
+
+        **Emits:** PizzaPutInOven
+      parameters:
+        - $ref: '#/components/parameters/KitchenOrderIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CookPizzaRequest'
+      responses:
+        '200':
+          description: "Pizza placed in oven"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitchenCommandResponse'
+        '404':
+          description: "Kitchen order or pizza preparation not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Pizza not in Prepped state"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /kitchen/kitchen-orders/{kitchenOrderId}/pack-order:
+    post:
+      tags: [Kitchen]
+      operationId: packOrder
+      summary: "Pack Order"
+      description: |
+        Box remaining pizzas and pack the full order with delivery instructions
+        for handoff to delivery.
+
+        **Preconditions:**
+        - All PizzaPreparations must be in Baked or Boxed state
+
+        **Emits:** OrderPreparedAndPacked
+
+        **Cross-BC effect:** OrderPreparedAndPacked triggers the
+        pol-create-delivery-on-order-packed policy in the Delivery context.
+      parameters:
+        - $ref: '#/components/parameters/KitchenOrderIdPath'
+      responses:
+        '200':
+          description: "Order packed for delivery"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KitchenCommandResponse'
+        '404':
+          description: "Kitchen order not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Not all pizzas are baked/boxed"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: "Domain rule violation (e.g., order has no items)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ---------------------------------------------------------------------------
+  # DELIVERY — Delivery Aggregate
+  # ---------------------------------------------------------------------------
+
+  /delivery/deliveries:
+    get:
+      tags: [Delivery]
+      operationId: listDeliveries
+      summary: "List Deliveries"
+      description: "Retrieve deliveries, optionally filtered by status or neighborhood."
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Pending, DriverNotified, PickedUp, Delivered, Confirmed]
+          description: "Filter by delivery status"
+        - name: neighborhood
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "Filter by delivery neighborhood (for driver zone assignment)"
+      responses:
+        '200':
+          description: "Deliveries retrieved"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryResponse'
+
+  /delivery/deliveries/{deliveryId}:
+    get:
+      tags: [Delivery]
+      operationId: getDelivery
+      summary: "Get Delivery"
+      description: "Retrieve delivery details by ID."
+      parameters:
+        - $ref: '#/components/parameters/DeliveryIdPath'
+      responses:
+        '200':
+          description: "Delivery found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryResponse'
+        '404':
+          description: "Delivery not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /delivery/deliveries/{deliveryId}/notify-delivery-people:
+    post:
+      tags: [Delivery]
+      operationId: notifyDeliveryPeople
+      summary: "Notify Delivery People"
+      description: |
+        Notify delivery drivers that an order is packed and ready for pickup.
+
+        **Preconditions:**
+        - Delivery must be in Pending state
+
+        **Emits:** DeliveryPeopleNotified
+      parameters:
+        - $ref: '#/components/parameters/DeliveryIdPath'
+      responses:
+        '200':
+          description: "Delivery drivers notified"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryCommandResponse'
+        '404':
+          description: "Delivery not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Delivery not in Pending state"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /delivery/deliveries/{deliveryId}/notify-order-delivered:
+    post:
+      tags: [Delivery]
+      operationId: notifyOrderDelivered
+      summary: "Notify Order Delivered"
+      description: |
+        Delivery person confirms in the system that the order has been
+        delivered to the customer.
+
+        **Preconditions:**
+        - Delivery must be in PickedUp or Delivered state
+
+        **Emits:** OrderDeliveryNotified
+      parameters:
+        - $ref: '#/components/parameters/DeliveryIdPath'
+      responses:
+        '200':
+          description: "Delivery confirmation recorded"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryCommandResponse'
+        '404':
+          description: "Delivery not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: "Delivery not in PickedUp or Delivered state"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+
+components:
+
+  # ---------------------------------------------------------------------------
+  # PATH PARAMETERS
+  # ---------------------------------------------------------------------------
+
+  parameters:
+    OrderIdPath:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: "Unique order identifier"
+
+    CustomerIdPath:
+      name: customerId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: "Unique customer identifier"
+
+    KitchenOrderIdPath:
+      name: kitchenOrderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: "Unique kitchen order identifier"
+
+    DeliveryIdPath:
+      name: deliveryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: "Unique delivery identifier"
+
+  # ---------------------------------------------------------------------------
+  # SCHEMAS
+  # ---------------------------------------------------------------------------
+
+  schemas:
+
+    # ---- Value Objects ----
+
+    Money:
+      type: object
+      description: "Monetary amount with currency (defaults to BRL)"
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          description: "Monetary amount"
+        currency:
+          type: string
+          description: "ISO 4217 currency code"
+          default: "BRL"
+      required: [amount, currency]
+
+    DeliveryAddress:
+      type: object
+      description: "Delivery address for order fulfillment"
+      properties:
+        street:
+          type: string
+          description: "Street address"
+        city:
+          type: string
+          description: "City (e.g., São Paulo)"
+        neighborhood:
+          type: string
+          description: "Neighborhood — relevant for driver zone assignment"
+      required: [street, city, neighborhood]
+
+    # ---- Order Management: Request Schemas ----
+
+    RegisterCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "Customer's full name"
+        phoneNumber:
+          type: string
+          description: "Customer's phone number for delivery contact"
+        address:
+          $ref: '#/components/schemas/DeliveryAddress'
+      required: [name, phoneNumber, address]
+
+    RequestOrderRequest:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+          description: "ID of the customer placing the order"
+      required: [customerId]
+
+    OrderItemInput:
+      type: object
+      description: "A pizza item to add to the order"
+      properties:
+        pizzaType:
+          type: string
+          description: "Type of pizza (e.g., pepperoni, cheese)"
+        toppings:
+          type: array
+          items:
+            type: string
+          description: "Selected toppings for this pizza"
+        quantity:
+          type: integer
+          minimum: 1
+          description: "Number of this item"
+      required: [pizzaType, quantity]
+
+    SelectPizzaTypeRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemInput'
+          minItems: 1
+          description: "Pizza selections to add to the order"
+      required: [items]
+
+    EnterDeliveryInformationRequest:
+      type: object
+      properties:
+        deliveryAddress:
+          $ref: '#/components/schemas/DeliveryAddress'
+        deliveryInstructions:
+          type: string
+          description: "Special delivery instructions (optional)"
+      required: [deliveryAddress]
+
+    EnterPaymentInformationRequest:
+      type: object
+      properties:
+        paymentMethod:
+          type: string
+          description: "Payment method (e.g., credit_card, pix)"
+          enum: [credit_card, pix]
+      required: [paymentMethod]
+
+    ConfirmPaymentRequest:
+      type: object
+      description: "Payment confirmation from external Payment Gateway"
+      properties:
+        paymentReference:
+          type: string
+          description: "Reference ID from the Payment Gateway"
+        amount:
+          $ref: '#/components/schemas/Money'
+      required: [paymentReference, amount]
+
+    # ---- Order Management: Response Schemas ----
+
+    CustomerResponse:
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          $ref: '#/components/schemas/DeliveryAddress'
+
+    OrderItemResponse:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        pizzaType:
+          type: string
+        toppings:
+          type: array
+          items:
+            type: string
+        quantity:
+          type: integer
+
+    OrderResponse:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Created, Configuring, PaymentPending, Paid, Placed]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        deliveryInstructions:
+          type: string
+          nullable: true
+        price:
+          $ref: '#/components/schemas/Money'
+        placedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    OrderCommandResponse:
+      type: object
+      description: "Response from an order command, including updated state and emitted event"
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Created, Configuring, PaymentPending, Paid, Placed]
+        event:
+          type: object
+          description: "The domain event emitted by this command"
+          properties:
+            type:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+
+    # ---- Kitchen: Request Schemas ----
+
+    PrepPizzaRequest:
+      type: object
+      properties:
+        prepId:
+          type: string
+          format: uuid
+          description: "ID of the PizzaPreparation to start prepping"
+      required: [prepId]
+
+    CookPizzaRequest:
+      type: object
+      properties:
+        prepId:
+          type: string
+          format: uuid
+          description: "ID of the PizzaPreparation to put in oven"
+      required: [prepId]
+
+    # ---- Kitchen: Response Schemas ----
+
+    PizzaPreparationResponse:
+      type: object
+      properties:
+        prepId:
+          type: string
+          format: uuid
+        pizzaType:
+          type: string
+        toppings:
+          type: array
+          items:
+            type: string
+        quantity:
+          type: integer
+        status:
+          type: string
+          enum: [Queued, Prepping, Prepped, InOven, Baked, Boxed]
+
+    KitchenOrderResponse:
+      type: object
+      properties:
+        kitchenOrderId:
+          type: string
+          format: uuid
+        sourceOrderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Received, InPreparation, Packed]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PizzaPreparationResponse'
+        deliveryInstructions:
+          type: string
+          nullable: true
+        receivedAt:
+          type: string
+          format: date-time
+
+    KitchenCommandResponse:
+      type: object
+      description: "Response from a kitchen command, including updated state and emitted event"
+      properties:
+        kitchenOrderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Received, InPreparation, Packed]
+        event:
+          type: object
+          properties:
+            type:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+
+    # ---- Delivery: Response Schemas ----
+
+    DeliveryResponse:
+      type: object
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+        sourceOrderId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Pending, DriverNotified, PickedUp, Delivered, Confirmed]
+        customerName:
+          type: string
+        customerPhone:
+          type: string
+        deliveryAddress:
+          $ref: '#/components/schemas/DeliveryAddress'
+        deliveryInstructions:
+          type: string
+          nullable: true
+
+    DeliveryCommandResponse:
+      type: object
+      description: "Response from a delivery command, including updated state and emitted event"
+      properties:
+        deliveryId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Pending, DriverNotified, PickedUp, Delivered, Confirmed]
+        event:
+          type: object
+          properties:
+            type:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+
+    # ---- Domain Events (for documentation and event consumers) ----
+
+    OrderRequestedEvent:
+      type: object
+      description: "Emitted when a customer initiates a new order"
+      properties:
+        type: { type: string, const: "OrderRequested" }
+        orderId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        requestedAt: { type: string, format: date-time }
+
+    TypeOfPizzasSelectedEvent:
+      type: object
+      description: "Emitted when the customer selects pizza type(s) and toppings"
+      properties:
+        type: { type: string, const: "TypeOfPizzasSelected" }
+        orderId: { type: string, format: uuid }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+
+    DeliveryInformationEnteredEvent:
+      type: object
+      description: "Emitted when the customer enters delivery address and instructions"
+      properties:
+        type: { type: string, const: "DeliveryInformationEntered" }
+        orderId: { type: string, format: uuid }
+        deliveryAddress: { $ref: '#/components/schemas/DeliveryAddress' }
+        deliveryInstructions: { type: string }
+
+    PaymentInformationEnteredEvent:
+      type: object
+      description: "Emitted when the customer provides payment details"
+      properties:
+        type: { type: string, const: "PaymentInformationEntered" }
+        orderId: { type: string, format: uuid }
+        paymentMethod: { type: string }
+
+    PaymentCompletedEvent:
+      type: object
+      description: "Emitted when the external Payment System confirms payment"
+      properties:
+        type: { type: string, const: "PaymentCompleted" }
+        orderId: { type: string, format: uuid }
+        paymentReference: { type: string }
+        amount: { $ref: '#/components/schemas/Money' }
+        paidAt: { type: string, format: date-time }
+
+    OrderPlacedEvent:
+      type: object
+      description: >
+        Pivotal event. Emitted when the order is finalized and ready for
+        kitchen preparation. Marks the boundary between Orders and Kitchen.
+      properties:
+        type: { type: string, const: "OrderPlaced" }
+        orderId: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        deliveryAddress: { $ref: '#/components/schemas/DeliveryAddress' }
+        deliveryInstructions: { type: string }
+        price: { $ref: '#/components/schemas/Money' }
+        placedAt: { type: string, format: date-time }
+
+    KitchenNotifiedEvent:
+      type: object
+      description: "Emitted when the kitchen receives a new order"
+      properties:
+        type: { type: string, const: "KitchenNotified" }
+        kitchenOrderId: { type: string, format: uuid }
+        sourceOrderId: { type: string, format: uuid }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              pizzaType: { type: string }
+              toppings: { type: array, items: { type: string } }
+              quantity: { type: integer }
+        receivedAt: { type: string, format: date-time }
+
+    PizzaPrepStartedEvent:
+      type: object
+      description: "Emitted when a pizza chef begins preparing a pizza"
+      properties:
+        type: { type: string, const: "PizzaPrepStarted" }
+        kitchenOrderId: { type: string, format: uuid }
+        prepId: { type: string, format: uuid }
+        startedAt: { type: string, format: date-time }
+
+    OrderPreparedAndPackedEvent:
+      type: object
+      description: >
+        Pivotal event. Emitted when all pizzas are boxed and the full order
+        is packed with delivery instructions. Marks the boundary between
+        Kitchen and Delivery.
+      properties:
+        type: { type: string, const: "OrderPreparedAndPacked" }
+        kitchenOrderId: { type: string, format: uuid }
+        sourceOrderId: { type: string, format: uuid }
+        deliveryInstructions: { type: string }
+        packedAt: { type: string, format: date-time }
+
+    DeliveryPeopleNotifiedEvent:
+      type: object
+      description: "Emitted when delivery drivers are notified of a ready order"
+      properties:
+        type: { type: string, const: "DeliveryPeopleNotified" }
+        deliveryId: { type: string, format: uuid }
+        sourceOrderId: { type: string, format: uuid }
+        deliveryAddress: { $ref: '#/components/schemas/DeliveryAddress' }
+        notifiedAt: { type: string, format: date-time }
+
+    OrderDeliveredEvent:
+      type: object
+      description: >
+        Pivotal event. Emitted when the order is physically delivered
+        to the customer.
+      properties:
+        type: { type: string, const: "OrderDelivered" }
+        deliveryId: { type: string, format: uuid }
+        sourceOrderId: { type: string, format: uuid }
+        deliveredAt: { type: string, format: date-time }
+
+    OrderDeliveryNotifiedEvent:
+      type: object
+      description: "Emitted when the delivery person confirms delivery in the system"
+      properties:
+        type: { type: string, const: "OrderDeliveryNotified" }
+        deliveryId: { type: string, format: uuid }
+        sourceOrderId: { type: string, format: uuid }
+        confirmedAt: { type: string, format: date-time }
+
+    # ---- Standard Error Response ----
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [DOMAIN_ERROR, NOT_FOUND, CONFLICT, VALIDATION_ERROR]
+              description: "Error classification"
+            message:
+              type: string
+              description: "Human-readable error description"
+            details:
+              type: object
+              description: "Additional error context (optional)"
+          required: [code, message]

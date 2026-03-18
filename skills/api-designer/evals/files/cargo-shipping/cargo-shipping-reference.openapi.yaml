@@ -1,0 +1,899 @@
+openapi: 3.1.0
+info:
+  title: Cargo Shipping API
+  version: 0.1.0
+  summary: OpenAPI projection of the Cargo Shipping DMML reference model
+  description: |
+    REST API generated from the Cargo Shipping DMML domain model.
+
+    Implemented bounded contexts:
+    - Booking
+    - Tracking
+    - Voyage
+    - Location
+
+    External dependency, documented but not implemented here:
+    - Routing
+
+    Commands are exposed as `POST` operations. Read models and aggregate lookups
+    are exposed as `GET` operations. Preconditions and invariants from DMML are
+    documented as error cases using standard `404`, `409`, and `422` responses.
+
+servers:
+  - url: https://api.example.com
+    description: Example production endpoint
+
+tags:
+  - name: Booking
+    description: Cargo booking, itinerary assignment, destination changes, and cargo tracking view queries.
+  - name: Tracking
+    description: Recording and querying cargo handling events.
+  - name: Voyage
+    description: Voyage scheduling and voyage lookup.
+  - name: Location
+    description: Reference data for UN/LOCODE locations.
+
+paths:
+  /booking/cargos:
+    post:
+      tags: [Booking]
+      operationId: bookCargo
+      summary: Book Cargo
+      description: |
+        Register a new cargo with origin, destination, and arrival deadline.
+
+        Preconditions:
+        - Origin and destination must be valid, known locations
+        - Origin and destination must be different
+        - Arrival deadline must be in the future
+
+        Emits: Cargo Booked
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCargoRequest'
+      responses:
+        '201':
+          description: Cargo booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookCargoResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /booking/cargos/{trackingId}:
+    get:
+      tags: [Booking]
+      operationId: getCargoByTrackingId
+      summary: Get Cargo
+      description: Retrieve the aggregate state for a cargo by tracking ID.
+      parameters:
+        - $ref: '#/components/parameters/TrackingIdPath'
+      responses:
+        '200':
+          description: Cargo aggregate found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CargoResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /booking/cargos/{trackingId}/assign-itinerary:
+    post:
+      tags: [Booking]
+      operationId: assignItinerary
+      summary: Assign Itinerary
+      description: |
+        Assign a planned route to a cargo.
+
+        Preconditions:
+        - Cargo must exist and be in Booked or Routed state
+        - Itinerary must satisfy the cargo's route specification
+
+        Emits: Cargo Routed
+      parameters:
+        - $ref: '#/components/parameters/TrackingIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignItineraryRequest'
+      responses:
+        '200':
+          description: Itinerary assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignItineraryResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /booking/cargos/{trackingId}/change-destination:
+    post:
+      tags: [Booking]
+      operationId: changeDestination
+      summary: Change Destination
+      description: |
+        Update the cargo's route specification with a new destination.
+
+        Preconditions:
+        - Cargo must not be CLAIMED
+        - New destination must be different from current destination
+        - New destination must be a valid location
+
+        Emits: Cargo Destination Changed
+      parameters:
+        - $ref: '#/components/parameters/TrackingIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeDestinationRequest'
+      responses:
+        '200':
+          description: Destination changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeDestinationResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /booking/cargos/{trackingId}/derive-delivery:
+    post:
+      tags: [Booking]
+      operationId: deriveDelivery
+      summary: Derive Delivery
+      description: |
+        Internal command to re-derive the Delivery value object from the
+        cargo's handling history and current itinerary.
+
+        Preconditions:
+        - Cargo must exist
+
+        Emits: Cargo Misdirected, Cargo Delivered
+      x-internal: true
+      parameters:
+        - $ref: '#/components/parameters/TrackingIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeriveDeliveryRequest'
+      responses:
+        '200':
+          description: Delivery re-derived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeriveDeliveryResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /booking/cargo-tracking-view:
+    get:
+      tags: [Booking]
+      operationId: getCargoTrackingView
+      summary: Get Cargo Tracking View
+      description: Read-optimized projection for customer-facing cargo tracking.
+      parameters:
+        - name: trackingId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Tracking ID of the cargo to project
+      responses:
+        '200':
+          description: Tracking projection found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CargoTrackingView'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /tracking/handling-events:
+    post:
+      tags: [Tracking]
+      operationId: registerHandlingEvent
+      summary: Register Handling Event
+      description: |
+        Record a cargo handling activity at a location.
+
+        Preconditions:
+        - Cargo with given trackingId must exist
+        - If eventType is LOAD or UNLOAD, voyageNumber is required
+        - If eventType is RECEIVE, CUSTOMS, or CLAIM, voyageNumber must be null
+        - Location must be a valid, known location
+
+        Emits: Cargo Handled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterHandlingEventRequest'
+      responses:
+        '201':
+          description: Handling event registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterHandlingEventResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /tracking/handling-events/{eventId}:
+    get:
+      tags: [Tracking]
+      operationId: getHandlingEventById
+      summary: Get Handling Event
+      description: Retrieve a registered handling event by its event ID.
+      parameters:
+        - $ref: '#/components/parameters/EventIdPath'
+      responses:
+        '200':
+          description: Handling event found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandlingEventResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /tracking/handling-events/by-tracking/{trackingId}:
+    get:
+      tags: [Tracking]
+      operationId: listHandlingEventsByTrackingId
+      summary: List Handling Events By Tracking ID
+      description: Query handling events for a cargo by tracking ID.
+      parameters:
+        - $ref: '#/components/parameters/TrackingIdPath'
+      responses:
+        '200':
+          description: Handling events found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HandlingEventResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /voyage/voyages:
+    post:
+      tags: [Voyage]
+      operationId: scheduleVoyage
+      summary: Schedule Voyage
+      description: |
+        Create a new voyage with an ordered schedule of carrier movements.
+
+        Preconditions:
+        - Voyage number must be unique
+        - Schedule must have at least one carrier movement
+
+        Emits: Voyage Scheduled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleVoyageRequest'
+      responses:
+        '201':
+          description: Voyage scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleVoyageResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /voyage/voyages/{voyageNumber}:
+    get:
+      tags: [Voyage]
+      operationId: getVoyageByVoyageNumber
+      summary: Get Voyage
+      description: Retrieve a voyage by voyage number.
+      parameters:
+        - $ref: '#/components/parameters/VoyageNumberPath'
+      responses:
+        '200':
+          description: Voyage found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoyageResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /location/locations/{unlocode}:
+    get:
+      tags: [Location]
+      operationId: getLocationByUnlocode
+      summary: Get Location
+      description: Retrieve a location from the UN/LOCODE registry.
+      parameters:
+        - $ref: '#/components/parameters/UnLocodePath'
+      responses:
+        '200':
+          description: Location found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /location/locations:
+    get:
+      tags: [Location]
+      operationId: listLocations
+      summary: List Locations
+      description: List all known locations.
+      responses:
+        '200':
+          description: Locations found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationResource'
+
+components:
+  parameters:
+    TrackingIdPath:
+      name: trackingId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Cargo tracking ID
+    EventIdPath:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Handling event identifier
+    VoyageNumberPath:
+      name: voyageNumber
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Voyage number such as V100
+    UnLocodePath:
+      name: unlocode
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[A-Z]{5}$'
+      description: UN/LOCODE identifier
+
+  responses:
+    NotFoundResponse:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConflictResponse:
+      description: Invalid aggregate state for the requested operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationErrorResponse:
+      description: Domain rule violation or invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [DOMAIN_ERROR, NOT_FOUND, CONFLICT, VALIDATION_ERROR]
+            message:
+              type: string
+            details:
+              type: object
+          required: [code, message]
+
+    TrackingId:
+      type: string
+      description: Unique cargo tracking identifier
+
+    VoyageNumber:
+      type: string
+      description: Voyage identifier such as V100 or V200
+
+    UnLocode:
+      type: string
+      pattern: '^[A-Z]{5}$'
+      description: UN/LOCODE 5-character location code
+
+    TransportStatus:
+      type: string
+      enum: [NOT_RECEIVED, IN_PORT, ONBOARD_CARRIER, CLAIMED, UNKNOWN]
+
+    RoutingStatus:
+      type: string
+      enum: [NOT_ROUTED, ROUTED, MISROUTED]
+
+    HandlingEventType:
+      type: string
+      enum: [RECEIVE, LOAD, UNLOAD, CUSTOMS, CLAIM]
+
+    Date:
+      type: string
+      format: date
+
+    DateTime:
+      type: string
+      format: date-time
+
+    Location:
+      type: object
+      properties:
+        unlocode:
+          $ref: '#/components/schemas/UnLocode'
+        name:
+          type: string
+      required: [unlocode, name]
+
+    RouteSpecification:
+      type: object
+      properties:
+        origin:
+          $ref: '#/components/schemas/Location'
+        destination:
+          $ref: '#/components/schemas/Location'
+        arrivalDeadline:
+          $ref: '#/components/schemas/Date'
+      required: [origin, destination, arrivalDeadline]
+
+    Leg:
+      type: object
+      properties:
+        voyageNumber:
+          $ref: '#/components/schemas/VoyageNumber'
+        loadLocation:
+          $ref: '#/components/schemas/Location'
+        unloadLocation:
+          $ref: '#/components/schemas/Location'
+        expectedLoadTime:
+          $ref: '#/components/schemas/DateTime'
+        expectedUnloadTime:
+          $ref: '#/components/schemas/DateTime'
+      required:
+        - voyageNumber
+        - loadLocation
+        - unloadLocation
+        - expectedLoadTime
+        - expectedUnloadTime
+
+    Itinerary:
+      type: object
+      properties:
+        legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Leg'
+      required: [legs]
+
+    Delivery:
+      type: object
+      properties:
+        transportStatus:
+          $ref: '#/components/schemas/TransportStatus'
+        lastKnownLocation:
+          anyOf:
+            - $ref: '#/components/schemas/Location'
+            - type: 'null'
+        currentVoyage:
+          anyOf:
+            - $ref: '#/components/schemas/VoyageNumber'
+            - type: 'null'
+        isMisdirected:
+          type: boolean
+        eta:
+          anyOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        isUnloadedAtDestination:
+          type: boolean
+        routingStatus:
+          $ref: '#/components/schemas/RoutingStatus'
+      required:
+        - transportStatus
+        - isMisdirected
+        - isUnloadedAtDestination
+        - routingStatus
+
+    CarrierMovement:
+      type: object
+      properties:
+        departureLocation:
+          $ref: '#/components/schemas/Location'
+        arrivalLocation:
+          $ref: '#/components/schemas/Location'
+        departureTime:
+          $ref: '#/components/schemas/DateTime'
+        arrivalTime:
+          $ref: '#/components/schemas/DateTime'
+      required:
+        - departureLocation
+        - arrivalLocation
+        - departureTime
+        - arrivalTime
+
+    HandlingEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        eventType:
+          $ref: '#/components/schemas/HandlingEventType'
+        location:
+          $ref: '#/components/schemas/Location'
+        completionTime:
+          $ref: '#/components/schemas/DateTime'
+        voyageNumber:
+          anyOf:
+            - $ref: '#/components/schemas/VoyageNumber'
+            - type: 'null'
+      required: [trackingId, eventType, location, completionTime]
+
+    CargoResource:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        routeSpecification:
+          $ref: '#/components/schemas/RouteSpecification'
+        itinerary:
+          anyOf:
+            - $ref: '#/components/schemas/Itinerary'
+            - type: 'null'
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+        lifecycleState:
+          type: string
+          enum: [Booked, Routed, InTransit, Claimed]
+      required: [trackingId, routeSpecification, delivery]
+
+    HandlingEventResource:
+      type: object
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        eventType:
+          $ref: '#/components/schemas/HandlingEventType'
+        location:
+          $ref: '#/components/schemas/Location'
+        completionTime:
+          $ref: '#/components/schemas/DateTime'
+        registrationTime:
+          $ref: '#/components/schemas/DateTime'
+        voyageNumber:
+          anyOf:
+            - $ref: '#/components/schemas/VoyageNumber'
+            - type: 'null'
+      required:
+        - eventId
+        - trackingId
+        - eventType
+        - location
+        - completionTime
+        - registrationTime
+
+    VoyageResource:
+      type: object
+      properties:
+        voyageNumber:
+          $ref: '#/components/schemas/VoyageNumber'
+        schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierMovement'
+        lifecycleState:
+          type: string
+          enum: [Scheduled, InProgress, Completed]
+      required: [voyageNumber, schedule]
+
+    LocationResource:
+      type: object
+      properties:
+        unlocode:
+          $ref: '#/components/schemas/UnLocode'
+        name:
+          type: string
+      required: [unlocode, name]
+
+    CargoTrackingView:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        origin:
+          type: string
+        destination:
+          type: string
+        transportStatus:
+          type: string
+        lastKnownLocation:
+          type: string
+        eta:
+          anyOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        isMisdirected:
+          type: boolean
+      required:
+        - trackingId
+        - origin
+        - destination
+        - transportStatus
+        - isMisdirected
+
+    CargoBookedEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        origin:
+          $ref: '#/components/schemas/Location'
+        destination:
+          $ref: '#/components/schemas/Location'
+        arrivalDeadline:
+          $ref: '#/components/schemas/Date'
+        bookedAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [trackingId, origin, destination, arrivalDeadline, bookedAt]
+
+    CargoRoutedEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+      required: [trackingId, itinerary]
+
+    CargoDestinationChangedEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        newRouteSpecification:
+          $ref: '#/components/schemas/RouteSpecification'
+        oldDestination:
+          $ref: '#/components/schemas/Location'
+        newDestination:
+          $ref: '#/components/schemas/Location'
+      required: [trackingId, newRouteSpecification, oldDestination, newDestination]
+
+    CargoMisdirectedEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        handlingEventType:
+          $ref: '#/components/schemas/HandlingEventType'
+        location:
+          $ref: '#/components/schemas/Location'
+        expectedNextLocation:
+          $ref: '#/components/schemas/Location'
+      required: [trackingId, handlingEventType, location, expectedNextLocation]
+
+    CargoDeliveredEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        deliveredAt:
+          $ref: '#/components/schemas/DateTime'
+        destination:
+          $ref: '#/components/schemas/Location'
+      required: [trackingId, deliveredAt, destination]
+
+    CargoHandledEvent:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        eventType:
+          $ref: '#/components/schemas/HandlingEventType'
+        location:
+          $ref: '#/components/schemas/Location'
+        voyageNumber:
+          anyOf:
+            - $ref: '#/components/schemas/VoyageNumber'
+            - type: 'null'
+        completionTime:
+          $ref: '#/components/schemas/DateTime'
+      required: [trackingId, eventType, location, completionTime]
+
+    VoyageScheduledEvent:
+      type: object
+      properties:
+        voyageNumber:
+          $ref: '#/components/schemas/VoyageNumber'
+        schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierMovement'
+      required: [voyageNumber, schedule]
+
+    VoyageDelayedEvent:
+      x-draft: true
+      type: object
+      properties:
+        voyageNumber:
+          $ref: '#/components/schemas/VoyageNumber'
+        delayedMovementIndex:
+          type: integer
+        newDepartureTime:
+          $ref: '#/components/schemas/DateTime'
+        newArrivalTime:
+          $ref: '#/components/schemas/DateTime'
+      required: [voyageNumber, delayedMovementIndex, newDepartureTime, newArrivalTime]
+
+    BookCargoRequest:
+      type: object
+      properties:
+        origin:
+          $ref: '#/components/schemas/Location'
+        destination:
+          $ref: '#/components/schemas/Location'
+        arrivalDeadline:
+          $ref: '#/components/schemas/Date'
+      required: [origin, destination, arrivalDeadline]
+
+    BookCargoResponse:
+      type: object
+      properties:
+        cargo:
+          $ref: '#/components/schemas/CargoResource'
+        event:
+          $ref: '#/components/schemas/CargoBookedEvent'
+      required: [cargo, event]
+
+    AssignItineraryRequest:
+      type: object
+      properties:
+        itinerary:
+          $ref: '#/components/schemas/Itinerary'
+      required: [itinerary]
+
+    AssignItineraryResponse:
+      type: object
+      properties:
+        cargo:
+          $ref: '#/components/schemas/CargoResource'
+        event:
+          $ref: '#/components/schemas/CargoRoutedEvent'
+      required: [cargo, event]
+
+    ChangeDestinationRequest:
+      type: object
+      properties:
+        newDestination:
+          $ref: '#/components/schemas/Location'
+      required: [newDestination]
+
+    ChangeDestinationResponse:
+      type: object
+      properties:
+        cargo:
+          $ref: '#/components/schemas/CargoResource'
+        event:
+          $ref: '#/components/schemas/CargoDestinationChangedEvent'
+      required: [cargo, event]
+
+    DeriveDeliveryRequest:
+      type: object
+      properties:
+        handlingEvent:
+          $ref: '#/components/schemas/HandlingEvent'
+      required: [handlingEvent]
+
+    DeriveDeliveryResponse:
+      type: object
+      properties:
+        cargo:
+          $ref: '#/components/schemas/CargoResource'
+        events:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/CargoMisdirectedEvent'
+              - $ref: '#/components/schemas/CargoDeliveredEvent'
+      required: [cargo, events]
+
+    RegisterHandlingEventRequest:
+      type: object
+      properties:
+        trackingId:
+          $ref: '#/components/schemas/TrackingId'
+        eventType:
+          $ref: '#/components/schemas/HandlingEventType'
+        location:
+          $ref: '#/components/schemas/Location'
+        completionTime:
+          $ref: '#/components/schemas/DateTime'
+        voyageNumber:
+          anyOf:
+            - $ref: '#/components/schemas/VoyageNumber'
+            - type: 'null'
+      required: [trackingId, eventType, location, completionTime]
+
+    RegisterHandlingEventResponse:
+      type: object
+      properties:
+        handlingEvent:
+          $ref: '#/components/schemas/HandlingEventResource'
+        event:
+          $ref: '#/components/schemas/CargoHandledEvent'
+      required: [handlingEvent, event]
+
+    ScheduleVoyageRequest:
+      type: object
+      properties:
+        voyageNumber:
+          $ref: '#/components/schemas/VoyageNumber'
+        schedule:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierMovement'
+      required: [voyageNumber, schedule]
+
+    ScheduleVoyageResponse:
+      type: object
+      properties:
+        voyage:
+          $ref: '#/components/schemas/VoyageResource'
+        event:
+          $ref: '#/components/schemas/VoyageScheduledEvent'
+      required: [voyage, event]
