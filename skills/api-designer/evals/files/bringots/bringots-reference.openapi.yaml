@@ -1,0 +1,753 @@
+openapi: 3.1.0
+info:
+  title: Bringots Credit Card Services API
+  version: 0.1.0
+  summary: OpenAPI projection of the Bringots Credit Card Services DMML model
+  description: |
+    REST API generated from the Bringots Credit Card Services DMML model.
+
+    Implemented bounded contexts:
+    - Card Issuance
+    - Purchase Processing
+    - Billing
+
+    External dependencies documented but not implemented here:
+    - Fraud Detection
+    - Banking
+    - Payment Network protocol
+
+    Commands are mapped to `POST` operations and read/query access is mapped to
+    `GET` operations. Domain invariants and command preconditions are documented
+    as `409` and `422` error responses.
+
+servers:
+  - url: https://api.example.com
+    description: Example production endpoint
+
+tags:
+  - name: Card Issuance
+    description: Credit card issuance and credit-card lookup.
+  - name: Purchase Processing
+    description: Purchase authorization and end-of-day settlement.
+  - name: Billing
+    description: Monthly statement generation, payment, and card transaction views.
+
+paths:
+  /card-issuance/credit-cards:
+    post:
+      tags: [Card Issuance]
+      operationId: issueCreditCard
+      summary: Issue Credit Card
+      description: |
+        Issue a new credit card to an existing Bringots bank account holder.
+
+        Preconditions:
+        - Customer must have an active Bringots bank account
+        - Customer must not already have an active Bringots credit card
+        - Requested limit must pass credit assessment rules
+
+        Emits: Credit Card Issued
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueCreditCardRequest'
+      responses:
+        '201':
+          description: Credit card issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueCreditCardResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /card-issuance/credit-cards/{cardId}:
+    get:
+      tags: [Card Issuance]
+      operationId: getCreditCardById
+      summary: Get Credit Card
+      description: Retrieve the aggregate state of an issued credit card.
+      parameters:
+        - $ref: '#/components/parameters/CardIdPath'
+      responses:
+        '200':
+          description: Credit card found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreditCardResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /purchase-processing/purchase-authorizations:
+    post:
+      tags: [Purchase Processing]
+      operationId: authorizePurchase
+      summary: Authorize Purchase
+      description: |
+        Submit a purchase authorization request.
+
+        Preconditions:
+        - Card must exist and be Active
+        - Card must not be expired
+        - Amount must not exceed available credit
+        - Fraud screening must not flag the transaction
+
+        Emits: Purchase Authorized, Purchase Declined
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizePurchaseRequest'
+      responses:
+        '201':
+          description: Purchase authorization recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizePurchaseResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /purchase-processing/purchase-authorizations/{authorizationId}:
+    get:
+      tags: [Purchase Processing]
+      operationId: getPurchaseAuthorizationById
+      summary: Get Purchase Authorization
+      description: Retrieve a purchase authorization and its lifecycle state.
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationIdPath'
+      responses:
+        '200':
+          description: Purchase authorization found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseAuthorizationResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /purchase-processing/purchase-authorizations/settle-transactions:
+    post:
+      tags: [Purchase Processing]
+      operationId: settleTransactions
+      summary: Settle Transactions
+      description: |
+        Run the end-of-day settlement batch.
+
+        Preconditions:
+        - Settlement date must be today or in the past
+        - At least one authorized transaction exists for the date
+
+        Emits: Transaction Settled, Merchant Paid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettleTransactionsRequest'
+      responses:
+        '200':
+          description: Settlement batch completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettleTransactionsResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /billing/monthly-statements:
+    post:
+      tags: [Billing]
+      operationId: generateStatement
+      summary: Generate Statement
+      description: |
+        Generate the monthly statement for a credit card.
+
+        Preconditions:
+        - No statement already exists for this card and period
+        - The billing period must be complete
+
+        Emits: Statement Generated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateStatementRequest'
+      responses:
+        '201':
+          description: Statement generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateStatementResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /billing/monthly-statements/{statementId}:
+    get:
+      tags: [Billing]
+      operationId: getMonthlyStatementById
+      summary: Get Monthly Statement
+      description: Retrieve a monthly statement aggregate by statement ID.
+      parameters:
+        - $ref: '#/components/parameters/StatementIdPath'
+      responses:
+        '200':
+          description: Statement found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyStatementResource'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+  /billing/monthly-statements/{statementId}/pay-statement:
+    post:
+      tags: [Billing]
+      operationId: payStatement
+      summary: Pay Statement
+      description: |
+        Apply a manual or automatic payment to a statement.
+
+        Preconditions:
+        - Statement must exist and be in Generated, Sent, or PartiallyPaid status
+        - Payment amount must be positive
+        - Payment amount must not exceed remaining balance
+
+        Emits: Payment Received
+      parameters:
+        - $ref: '#/components/parameters/StatementIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayStatementRequest'
+      responses:
+        '200':
+          description: Payment applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayStatementResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+        '409':
+          $ref: '#/components/responses/ConflictResponse'
+        '422':
+          $ref: '#/components/responses/ValidationErrorResponse'
+
+  /billing/card-transactions:
+    get:
+      tags: [Billing]
+      operationId: getCardTransactionsView
+      summary: Get Card Transactions View
+      description: Read model showing recent transactions, current balance, and statement summary for a card.
+      parameters:
+        - name: cardNumber
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/CardNumber'
+      responses:
+        '200':
+          description: Card transactions projection found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardTransactionsView'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+
+components:
+  parameters:
+    CardIdPath:
+      name: cardId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Internal credit card identifier
+    AuthorizationIdPath:
+      name: authorizationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Purchase authorization identifier
+    StatementIdPath:
+      name: statementId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Monthly statement identifier
+
+  responses:
+    NotFoundResponse:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConflictResponse:
+      description: Aggregate state conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationErrorResponse:
+      description: Domain rule violation or invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum: [DOMAIN_ERROR, NOT_FOUND, CONFLICT, VALIDATION_ERROR]
+            message:
+              type: string
+            details:
+              type: object
+          required: [code, message]
+
+    Date:
+      type: string
+      format: date
+
+    DateTime:
+      type: string
+      format: date-time
+
+    Money:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          default: BRL
+      required: [amount, currency]
+
+    CardNumber:
+      type: string
+      pattern: '^[0-9]{16}$'
+      description: 16-digit Luhn-valid card number
+
+    MerchantInfo:
+      type: object
+      properties:
+        merchantName:
+          type: string
+        merchantId:
+          type: string
+        merchantCategory:
+          type: string
+      required: [merchantName, merchantId, merchantCategory]
+
+    StatementPeriod:
+      type: object
+      properties:
+        startDate:
+          $ref: '#/components/schemas/Date'
+        endDate:
+          $ref: '#/components/schemas/Date'
+      required: [startDate, endDate]
+
+    StatementLine:
+      type: object
+      properties:
+        transactionDate:
+          $ref: '#/components/schemas/Date'
+        description:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        authorizationRef:
+          type: string
+          format: uuid
+      required: [transactionDate, description, amount, authorizationRef]
+
+    TransactionSummary:
+      type: object
+      properties:
+        authorizationId:
+          type: string
+          format: uuid
+        merchantName:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        authorizedAt:
+          $ref: '#/components/schemas/DateTime'
+        settledAt:
+          anyOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+      required: [authorizationId, merchantName, amount, authorizedAt]
+
+    CreditCardResource:
+      type: object
+      properties:
+        cardId:
+          type: string
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        cardHolderId:
+          type: string
+        creditLimit:
+          $ref: '#/components/schemas/Money'
+        availableCredit:
+          $ref: '#/components/schemas/Money'
+        expirationDate:
+          $ref: '#/components/schemas/Date'
+        issuedAt:
+          $ref: '#/components/schemas/DateTime'
+        lifecycleState:
+          type: string
+          enum: [Requested, Active, Blocked, Expired, Cancelled]
+      required:
+        - cardId
+        - cardNumber
+        - cardHolderId
+        - creditLimit
+        - availableCredit
+        - expirationDate
+        - issuedAt
+        - lifecycleState
+
+    PurchaseAuthorizationResource:
+      type: object
+      properties:
+        authorizationId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        amount:
+          $ref: '#/components/schemas/Money'
+        merchantInfo:
+          $ref: '#/components/schemas/MerchantInfo'
+        authorizationDate:
+          $ref: '#/components/schemas/DateTime'
+        declineReason:
+          anyOf:
+            - type: string
+            - type: 'null'
+        settlementDate:
+          anyOf:
+            - $ref: '#/components/schemas/DateTime'
+            - type: 'null'
+        lifecycleState:
+          type: string
+          enum: [Pending, Authorized, Declined, Settled]
+      required:
+        - authorizationId
+        - cardNumber
+        - amount
+        - merchantInfo
+        - authorizationDate
+        - lifecycleState
+
+    MonthlyStatementResource:
+      type: object
+      properties:
+        statementId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        statementPeriod:
+          $ref: '#/components/schemas/StatementPeriod'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementLine'
+        totalAmount:
+          $ref: '#/components/schemas/Money'
+        minimumPayment:
+          $ref: '#/components/schemas/Money'
+        dueDate:
+          $ref: '#/components/schemas/Date'
+        amountPaid:
+          $ref: '#/components/schemas/Money'
+        autoPayEnrolled:
+          type: boolean
+        lifecycleState:
+          type: string
+          enum: [Open, Generated, Sent, PartiallyPaid, Paid, Overdue]
+      required:
+        - statementId
+        - cardNumber
+        - statementPeriod
+        - lines
+        - totalAmount
+        - minimumPayment
+        - dueDate
+        - amountPaid
+        - autoPayEnrolled
+        - lifecycleState
+
+    CardTransactionsView:
+      type: object
+      properties:
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        recentTransactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionSummary'
+        currentBalance:
+          $ref: '#/components/schemas/Money'
+        lastStatementAmount:
+          $ref: '#/components/schemas/Money'
+        lastStatementDueDate:
+          $ref: '#/components/schemas/Date'
+        minimumPaymentDue:
+          $ref: '#/components/schemas/Money'
+      required:
+        - cardNumber
+        - recentTransactions
+        - currentBalance
+        - lastStatementAmount
+        - lastStatementDueDate
+        - minimumPaymentDue
+
+    CreditCardIssuedEvent:
+      type: object
+      properties:
+        cardId:
+          type: string
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        cardHolderId:
+          type: string
+        creditLimit:
+          $ref: '#/components/schemas/Money'
+        expirationDate:
+          $ref: '#/components/schemas/Date'
+        issuedAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [cardId, cardNumber, cardHolderId, creditLimit, expirationDate, issuedAt]
+
+    PurchaseAuthorizedEvent:
+      type: object
+      properties:
+        authorizationId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        amount:
+          $ref: '#/components/schemas/Money'
+        merchantInfo:
+          $ref: '#/components/schemas/MerchantInfo'
+        authorizedAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [authorizationId, cardNumber, amount, merchantInfo, authorizedAt]
+
+    PurchaseDeclinedEvent:
+      type: object
+      properties:
+        authorizationId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        amount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          type: string
+        declinedAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [authorizationId, cardNumber, amount, reason, declinedAt]
+
+    TransactionSettledEvent:
+      type: object
+      properties:
+        authorizationId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        amount:
+          $ref: '#/components/schemas/Money'
+        settledAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [authorizationId, cardNumber, amount, settledAt]
+
+    MerchantPaidEvent:
+      type: object
+      properties:
+        authorizationId:
+          type: string
+          format: uuid
+        merchantInfo:
+          $ref: '#/components/schemas/MerchantInfo'
+        amount:
+          $ref: '#/components/schemas/Money'
+        paidAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [authorizationId, merchantInfo, amount, paidAt]
+
+    StatementGeneratedEvent:
+      type: object
+      properties:
+        statementId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        totalAmount:
+          $ref: '#/components/schemas/Money'
+        minimumPayment:
+          $ref: '#/components/schemas/Money'
+        dueDate:
+          $ref: '#/components/schemas/Date'
+      required: [statementId, cardNumber, totalAmount, minimumPayment, dueDate]
+
+    PaymentReceivedEvent:
+      type: object
+      properties:
+        statementId:
+          type: string
+          format: uuid
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        paymentAmount:
+          $ref: '#/components/schemas/Money'
+        paymentMethod:
+          type: string
+          enum: [MANUAL, AUTOPAY]
+        paidAt:
+          $ref: '#/components/schemas/DateTime'
+      required: [statementId, cardNumber, paymentAmount, paymentMethod, paidAt]
+
+    IssueCreditCardRequest:
+      type: object
+      properties:
+        cardHolderId:
+          type: string
+        requestedLimit:
+          $ref: '#/components/schemas/Money'
+      required: [cardHolderId, requestedLimit]
+
+    IssueCreditCardResponse:
+      type: object
+      properties:
+        creditCard:
+          $ref: '#/components/schemas/CreditCardResource'
+        event:
+          $ref: '#/components/schemas/CreditCardIssuedEvent'
+      required: [creditCard, event]
+
+    AuthorizePurchaseRequest:
+      type: object
+      properties:
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        amount:
+          $ref: '#/components/schemas/Money'
+        merchantInfo:
+          $ref: '#/components/schemas/MerchantInfo'
+        billingAddress:
+          type: string
+        transactionDateTime:
+          $ref: '#/components/schemas/DateTime'
+      required: [cardNumber, amount, merchantInfo, billingAddress, transactionDateTime]
+
+    AuthorizePurchaseResponse:
+      type: object
+      properties:
+        purchaseAuthorization:
+          $ref: '#/components/schemas/PurchaseAuthorizationResource'
+        event:
+          oneOf:
+            - $ref: '#/components/schemas/PurchaseAuthorizedEvent'
+            - $ref: '#/components/schemas/PurchaseDeclinedEvent'
+      required: [purchaseAuthorization, event]
+
+    SettleTransactionsRequest:
+      type: object
+      properties:
+        settlementDate:
+          $ref: '#/components/schemas/Date'
+      required: [settlementDate]
+
+    SettleTransactionsResponse:
+      type: object
+      properties:
+        settlementDate:
+          $ref: '#/components/schemas/Date'
+        settledCount:
+          type: integer
+        events:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/TransactionSettledEvent'
+              - $ref: '#/components/schemas/MerchantPaidEvent'
+      required: [settlementDate, settledCount, events]
+
+    GenerateStatementRequest:
+      type: object
+      properties:
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        period:
+          $ref: '#/components/schemas/StatementPeriod'
+      required: [cardNumber, period]
+
+    GenerateStatementResponse:
+      type: object
+      properties:
+        monthlyStatement:
+          $ref: '#/components/schemas/MonthlyStatementResource'
+        event:
+          $ref: '#/components/schemas/StatementGeneratedEvent'
+      required: [monthlyStatement, event]
+
+    PayStatementRequest:
+      type: object
+      properties:
+        paymentAmount:
+          $ref: '#/components/schemas/Money'
+        paymentMethod:
+          type: string
+          enum: [MANUAL, AUTOPAY]
+      required: [paymentAmount, paymentMethod]
+
+    PayStatementResponse:
+      type: object
+      properties:
+        monthlyStatement:
+          $ref: '#/components/schemas/MonthlyStatementResource'
+        event:
+          $ref: '#/components/schemas/PaymentReceivedEvent'
+      required: [monthlyStatement, event]

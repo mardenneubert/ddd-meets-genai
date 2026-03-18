@@ -174,10 +174,27 @@ Name the schema `{EventName}Event`. Include all event attributes. These
 appear in command response bodies and in a dedicated "Domain Events"
 documentation section.
 
-**Entity schemas for responses:**
+**Nullable propagation to events:** When a DMML entity attribute is marked
+`nullable: true` and a domain event carries the same attribute, the event
+schema must also treat it as nullable (use `anyOf` with `type: 'null'`) and
+must NOT list it in `required`. For example, if `HandlingEvent.voyageNumber`
+is nullable (because RECEIVE/CUSTOMS/CLAIM events don't have a voyage), then
+`CargoHandledEvent.voyageNumber` must also be nullable and not required.
 
-For query/GET endpoints, create response schemas from the root entity's
-attributes plus lifecycle status.
+**Entity schemas for responses (Resource schemas):**
+
+For query/GET endpoints, create a `{EntityName}Resource` schema from the
+root entity's attributes plus lifecycle status.
+
+**IMPORTANT — wire all value objects into resource schemas:** Every value
+object defined inside an aggregate MUST appear somewhere — either as a
+property of the resource schema, in a request schema, or in an event schema.
+If the DMML defines a value object inside an aggregate (e.g., `StatementLine`
+inside `MonthlyStatement`), it belongs in the resource schema even if the
+entity's attribute list doesn't explicitly name it. Check the aggregate's
+invariants for clues — if an invariant references a VO (e.g., "total must
+equal sum of statement line amounts"), the VO is structurally part of the
+aggregate. Do NOT create orphan schemas that are never `$ref`'d.
 
 ### Step 4: Build Operation Definitions
 
@@ -266,7 +283,7 @@ Error responses follow the standard error format and map from DMML elements:
 | Aggregate not found | `404 Not Found` | `NOT_FOUND` | ID doesn't resolve |
 | Input validation | `400 Bad Request` | `VALIDATION_ERROR` | Schema validation failure |
 
-**Standard error schema:**
+**Standard error schema (MUST use this exact structure):**
 
 ```yaml
 ErrorResponse:
@@ -284,6 +301,15 @@ ErrorResponse:
           type: object
       required: [code, message]
 ```
+
+**IMPORTANT:** The ErrorResponse uses a **nested** structure — the `error`
+object wraps `code`, `message`, and `details`. Do NOT flatten this into a
+top-level `code`/`message`/`details` shape. The nested structure is
+intentional: it allows response bodies to carry both the `error` object and
+additional metadata at the top level if needed.
+
+When using `components/responses` for shared error responses (recommended for
+DRY), each shared response still references this same ErrorResponse schema.
 
 For each endpoint, document which specific invariants and preconditions
 could produce errors, referencing them in the operation description.
@@ -315,13 +341,14 @@ corresponding query endpoints with appropriate query parameters.
 
 ### Step 8: Assemble the Document
 
-Structure the final OpenAPI document:
+Structure the final OpenAPI document. Use **exactly** `version: "0.1.0"` —
+this is a generated first-pass API, not a released product.
 
 ```yaml
 openapi: "3.1.0"
 info:
   title: "{Domain Name} API"
-  version: "0.1.0"
+  version: "0.1.0"      # Always 0.1.0 for generated specs
   description: |
     REST API for the {Domain Name} domain, generated from the DMML
     domain model. Each bounded context is exposed as a separate API
@@ -369,6 +396,15 @@ Before outputting, verify the OpenAPI spec:
 - Request body schemas match DMML command attributes.
 - Response schemas include all relevant DMML event attributes.
 - Error responses cover all documented preconditions and invariants.
+- **No orphan schemas** — every schema in `components/schemas` is `$ref`'d
+  at least once. If a value object schema exists, it must be used somewhere.
+- **Nullable propagation** — for every DMML attribute marked `nullable: true`,
+  verify the corresponding schema property uses `anyOf` with `type: 'null'`
+  and is NOT in the `required` list. Check this in event schemas too, not
+  just entity/resource schemas.
+- **ErrorResponse structure** — verify it uses the nested `error.code` /
+  `error.message` format, not a flat top-level `code` / `message` shape.
+- **Version** — must be `0.1.0`.
 
 **Naming check:**
 - Schema names are PascalCase.
