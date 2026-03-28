@@ -1,0 +1,16 @@
+{
+  "name": "mermaid-diagram-creator-scripts",
+  "version": "1.0.0",
+  "description": "Validation scripts for the mermaid-diagram-creator skill",
+  "type": "module",
+  "scripts": {
+    "validate:parse": "node validate_mermaid_parse.mjs",
+    "validate:syntax": "python3 validate_mermaid_syntax.py",
+    "validate:coverage": "python3 validate_mermaid_coverage.py"
+  },
+  "dependencies": {
+    "dompurify": "^3.3.3",
+    "jsdom": "^29.0.1",
+    "mermaid": "^11.13.0"
+  }
+}
