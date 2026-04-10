@@ -4,7 +4,7 @@
 
 This repository contains the specifications, AI agent skills, and evaluation cases from our ongoing research into the intersection of Domain-Driven Design and Generative AI. The core idea: domain knowledge captured in Event Storming workshops can be systematically transformed into verified domain models by LLM-powered agents, bridging the gap between collaborative domain discovery and software implementation.
 
-[XP 2026 Slides](Domain Modeling Meets GenAI-XP2026.pdf)
+[XP 2026 Slides](<Domain Modeling Meets GenAI-XP2026.pdf>)
 
 ---
 
