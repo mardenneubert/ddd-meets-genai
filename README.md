@@ -113,7 +113,7 @@ Marden and Joe have been collaborating on software architecture patterns since 2
 - **Agile Brazil 2025** (Rio de Janeiro, September 2025) — *Domain Modeling Meets Generative AI.* First public presentation of the ESML/DMML pipeline with manual prompt orchestration and the Joe's Pizza case study. You can find a [PodCast from Joe and Marden discussing this topic here](https://www.youtube.com/watch?v=vOT9rwZMR-o).
 - **XP 2026** (São Paulo, April 2026) — *Domain Modeling Meets Generative AI.* Updated with agent skills, evaluation framework, spec-driven development framing, and the Bringots case study.
 - **Pattern Languages of Programs 2022 (PLoP '22)** [Leading a Software Architecture Revolution: “Part 1: Creating Awareness, Preparing and Measuring”](https://plopcon.org/proceedings/plop/2022/papers/22-neubert.pdf).
-- **European Conference on Pattern Languages of Programs 2023 (EuroPLoP '23)** [Leading a Software Architecture Revolution - Part 2a: Strategic Prioritization(https://dl.acm.org/doi/10.1145/3628034.3628048).
+- **European Conference on Pattern Languages of Programs 2023 (EuroPLoP '23)** [Leading a Software Architecture Revolution - Part 2a: Strategic Prioritization](https://dl.acm.org/doi/10.1145/3628034.3628048).
 - **Pattern Languages of Programs 2023 (PLoP '23)** [Leading a Software Architecture Revolution" "Part 2b: Tactical Prioritization"](https://plopcon.org/proceedings/plop/2023/01.html).
 
 
