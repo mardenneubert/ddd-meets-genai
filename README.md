@@ -104,7 +104,7 @@ Joseph (Joe) Yoder is the founder and principal of [The Refactory](https://refac
 
 ### Collaboration
 
-Marden and Joe have been collaborating on software architecture patterns since 2022, including the *Leading a Software Architecture Revolution* pattern series presented at PLoP 2022, EuroPLoP 2023, PLoP 2023, AsianPLoP 2024, and *Architecting Agility* at Agile Brazil (Aracaju). Their *Domain Modeling Meets Generative AI* research was first presented at Agile Brazil 2025 (Rio) and continues at XP 2026 (São Paulo, April 2026).
+Marden and Joe have been collaborating on software architecture patterns since 2022, including the *Leading a Software Architecture Revolution* pattern series presented at PLoP 2022, EuroPLoP 2023, PLoP 2023, AsianPLoP 2024, and *Architecting Agility* at Agile Brazil (Aracaju). Their *Domain Modeling Meets Generative AI* research was first presented at Agile Brazil 2025 (Rio de Janeiro, September 2025) and continues at XP 2026 (São Paulo, April 2026).
 
 ---
 
