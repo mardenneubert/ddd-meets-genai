@@ -100,18 +100,22 @@ Technology executive, author, and speaker with over 20 years of experience in so
 
 ### Joseph (Joe) W. Yoder
 
-Internationally recognized software architect, pattern author, and President of The Hillside Group. Founder and principal of The Refactory, Inc. Co-author of the seminal *Big Ball of Mud* pattern (with Brian Foote, 1997), which remains one of the most cited works in software architecture. A leading voice in the patterns community for over 25 years, Joe has organized and presented at conferences worldwide including PLoP, EuroPLoP, OOPSLA/SPLASH, QCon, GOTO, and YOW!. His work on Adaptive Object Models, architecture patterns, and bounded agent design bridges classical software engineering with emerging AI-driven approaches.
+Joseph (Joe) Yoder is the founder and principal of The Refactory, a Collaborating Researcher at IME/USP, an ACM Distinguished Member, and a Fellow and former President of The Hillside Group. Joe brings extensive industry experience advising and mentoring global enterprise organizations—including Nubank, PagSeguro, IBM, Caterpillar, and Itaú Unibanco—on software architecture, Domain-Driven Design, microservices, and agile transformations. He is a co-author of Cloud Application Architecture Patterns (O’Reilly), A Scrum Book (Pragmatic Bookshelf), and the widely influential Big Ball of Mud pattern. His current work focuses on practical domain modeling, cloud architectures, microservices, and the integration of AI-assisted engineering practices into modern software architecture.
 
 ### Collaboration
 
-Marden and Joe have been collaborating on software architecture patterns since 2022, including the *Leading a Software Architecture Revolution* pattern series presented at EuroPLoP 2023 and *Architecting Agility* at Agile Brazil. Their *Domain Modeling Meets Generative AI* research was first presented at Agile Brazil 2025 (Florianópolis) and continues at XP 2026 (São Paulo, April 2026).
+Marden and Joe have been collaborating on software architecture patterns since 2022, including the *Leading a Software Architecture Revolution* pattern series presented at PLoP 2022, EuroPLoP 2023, PLoP 2023, AsianPLoP 2024, and *Architecting Agility* at Agile Brazil (Aracaju). Their *Domain Modeling Meets Generative AI* research was first presented at Agile Brazil 2025 (Rio) and continues at XP 2026 (São Paulo, April 2026).
 
 ---
 
-## Presentations
+## Presentations and References
 
-- **Agile Brazil 2025** (Rio de Janeiro, September 2025) — *Domain Modeling Meets Generative AI.* First public presentation of the ESML/DMML pipeline with manual prompt orchestration and the Joe's Pizza case study.
+- **Agile Brazil 2025** (Rio de Janeiro, September 2025) — *Domain Modeling Meets Generative AI.* First public presentation of the ESML/DMML pipeline with manual prompt orchestration and the Joe's Pizza case study. You can find a PodCast from Joe and Marden discussing this topic [here](https://www.youtube.com/watch?v=vOT9rwZMR-o).
 - **XP 2026** (São Paulo, April 2026) — *Domain Modeling Meets Generative AI.* Updated with agent skills, evaluation framework, spec-driven development framing, and the Bringots case study.
+- **Pattern Languages of Programs 2022 (PLoP '22)** [Leading a Software Architecture Revolution: “Part 1: Creating Awareness, Preparing and Measuring”](https://plopcon.org/proceedings/plop/2022/papers/22-neubert.pdf).
+- **European Conference on Pattern Languages of Programs 2023 (EuroPLoP '23)** [Leading a Software Architecture Revolution - Part 2a: Strategic Prioritization(https://dl.acm.org/doi/10.1145/3628034.3628048).
+- **Pattern Languages of Programs 2023 (PLoP '23)** [Leading a Software Architecture Revolution" "Part 2b: Tactical Prioritization"]([https://plopcon.org/proceedings/plop/2022/papers/22-neubert.pdf](https://plopcon.org/proceedings/plop/2023/01.html)).
+
 
 ---
 
